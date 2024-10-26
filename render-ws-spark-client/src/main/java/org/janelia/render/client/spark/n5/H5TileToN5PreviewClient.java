@@ -538,7 +538,7 @@ public class H5TileToN5PreviewClient {
         LOG.info("exportPreview: downsample stack with factors {}", Arrays.toString(downsampleFactors));
 
         // Now that the full resolution image is saved into n5, generate the scale pyramid
-        final N5WriterSupplier n5Supplier = new N5Client.N5PathSupplier(exportInfo.n5PathString);
+        final N5WriterSupplier n5Supplier = new Util.N5PathSupplier(exportInfo.n5PathString);
 
         // TODO: if/when downsampled results are only partially removed, only downsample appended data
 
@@ -611,7 +611,7 @@ public class H5TileToN5PreviewClient {
                     final String dsDatasetName = downsampledDir.getAbsolutePath().substring(datasetStart);
                     LOG.info("exportPreview: removing previously downsampled dataset {}", dsDatasetName);
                     N5RemoveSpark.remove(sparkContext,
-                                         new N5Client.N5PathSupplier(exportInfo.parameters.n5Path),
+                                         new Util.N5PathSupplier(exportInfo.parameters.n5Path),
                                          dsDatasetName);
                 }
             }

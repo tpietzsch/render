@@ -340,7 +340,7 @@ public class N5Client {
             LOG.info("run: downsample stack with factors {}", Arrays.toString(downsampleFactors));
 
             // Now that the full resolution image is saved into n5, generate the scale pyramid
-            final N5WriterSupplier n5Supplier = new N5PathSupplier(parameters.n5Path);
+            final N5WriterSupplier n5Supplier = new Util.N5PathSupplier(parameters.n5Path);
 
             final List<String> downsampledDatasetPaths =
                     downsampleScalePyramid(sparkContext,
@@ -386,7 +386,7 @@ public class N5Client {
                      Arrays.toString(reviewDownsampleFactors));
 
             // Now that the full resolution image is saved into n5, generate the scale pyramid
-            final N5WriterSupplier n5ReviewSupplier = new N5PathSupplier(parameters.n5Path);
+            final N5WriterSupplier n5ReviewSupplier = new Util.N5PathSupplier(parameters.n5Path);
 
             final List<String> downsampledDatasetPaths =
                     downsampleScalePyramid(sparkContext,
@@ -512,19 +512,6 @@ public class N5Client {
 
         LOG.info("updateFullScaleExportAttributes: saved {}",
                  Paths.get(parameters.n5Path, exportAttributesDatasetName, "attributes.json"));
-    }
-
-    // serializable downsample supplier for spark
-    public static class N5PathSupplier implements N5WriterSupplier {
-        private final String path;
-        public N5PathSupplier(final String path) {
-            this.path = path;
-        }
-        @Override
-        public N5Writer get()
-                throws IOException {
-            return new N5FSWriter(path);
-        }
     }
 
     @Nonnull
