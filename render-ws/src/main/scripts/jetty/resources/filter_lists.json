@@ -211,6 +211,15 @@
       }
     ],
 
+    "jrc_mpi_psc120_1a2-destreak" : [
+      {
+        "className" : "org.janelia.alignment.destreak.LocalSmoothMaskStreakCorrector",
+        "parameters" : {
+          "dataString" : "5545,10920,24,8,0.0,5,15.0,0.05"
+        }
+      }
+    ],
+
     "simpleTest" : [
       {
         "className" : "org.janelia.alignment.filter.CLAHE",
