@@ -104,9 +104,9 @@ public class LocalSmoothMaskStreakCorrector extends SmoothMaskStreakCorrector {
 		weightedSum(ip, originalIP.getProcessor(), weight);
 	}
 
-	private void weightedSum(final ImageProcessor target,
-							 final ImageProcessor original,
-							 final RandomAccessibleInterval<FloatType> weight) {
+	protected void weightedSum(final ImageProcessor target,
+							   final ImageProcessor original,
+							   final RandomAccessibleInterval<FloatType> weight) {
 
 		final ImagePlus weightIP = ImageJFunctions.wrapFloat(weight, "weight");
 		final GaussianBlur gaussianBlur = new GaussianBlur();
