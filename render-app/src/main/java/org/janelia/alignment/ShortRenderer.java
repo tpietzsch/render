@@ -85,6 +85,6 @@ public class ShortRenderer {
         return new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_USHORT_GRAY);
     };
 
-    private static final Renderer.ProcessorWithMasksConverter CONVERTER =
+    public static final Renderer.ProcessorWithMasksConverter CONVERTER =
             (renderParameters, renderedImageProcessorWithMasks) -> targetToShortImage(renderedImageProcessorWithMasks);
 }

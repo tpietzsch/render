@@ -29,6 +29,7 @@ import org.janelia.alignment.ByteRenderer;
 import org.janelia.alignment.ImageAndMask;
 import org.janelia.alignment.RenderParameters;
 import org.janelia.alignment.Renderer;
+import org.janelia.alignment.ShortRenderer;
 import org.janelia.alignment.Utils;
 import org.janelia.alignment.loader.DynamicMaskLoader;
 import org.janelia.alignment.loader.ImageLoader;
@@ -57,6 +58,10 @@ import org.slf4j.LoggerFactory;
  * @author Eric Trautman
  */
 public class RenderTilesClient {
+
+    public enum RenderType {
+        EIGHT_BIT, SIXTEEN_BIT, ARGB
+    }
 
     public static class Parameters extends CommandLineParameters {
 
@@ -101,9 +106,9 @@ public class RenderTilesClient {
         public boolean doFilter = false;
 
         @Parameter(
-                names = "--render8Bit",
-                description = "Render the tiles as 8-bit grayscale images")
-        public boolean render8Bit = true;
+                names = "--renderType",
+                description = "How the tiles should be rendered")
+        public RenderType renderType = RenderType.EIGHT_BIT;
 
         @Parameter(
                 names = "--filterListName",
@@ -322,7 +327,7 @@ public class RenderTilesClient {
             }
         }
 
-        if (tileIds.size() == 0) {
+        if (tileIds.isEmpty()) {
             throw new IllegalArgumentException("There are no tiles to render!");
         }
 
@@ -403,14 +408,17 @@ public class RenderTilesClient {
         if (clientParameters.excludeMask) {
             // skip conversion step if we don't need to worry about mask
             bufferedImage = imageProcessorWithMasks.ip.getBufferedImage();
+        } else if (clientParameters.renderType == RenderType.EIGHT_BIT) {
+            bufferedImage = ByteRenderer.CONVERTER.convertProcessorWithMasksToImage(renderParameters,
+                                                                                    imageProcessorWithMasks);
+        } else if (clientParameters.renderType == RenderType.SIXTEEN_BIT) {
+            bufferedImage = ShortRenderer.CONVERTER.convertProcessorWithMasksToImage(renderParameters,
+                                                                                     imageProcessorWithMasks);
+        } else if (clientParameters.renderType == RenderType.ARGB) {
+            bufferedImage = ArgbRenderer.CONVERTER.convertProcessorWithMasksToImage(renderParameters,
+                                                                                    imageProcessorWithMasks);
         } else {
-            if (clientParameters.render8Bit) {
-                bufferedImage = ByteRenderer.CONVERTER.convertProcessorWithMasksToImage(renderParameters,
-                                                                                        imageProcessorWithMasks);
-            } else {
-                bufferedImage = ArgbRenderer.CONVERTER.convertProcessorWithMasksToImage(renderParameters,
-                                                                                        imageProcessorWithMasks);
-            }
+            throw new IllegalArgumentException("unsupported render type: " + clientParameters.renderType);
         }
 
         Utils.saveImage(bufferedImage,
@@ -493,7 +501,7 @@ public class RenderTilesClient {
 
             if ((translateX != 0.0) || (translateY != 0.0)) {
                 final String translateDataString = translateX + " " + translateY;
-                LOG.info("renderTile: translating hacked tile by " + translateDataString);
+                LOG.info("renderTile: translating hacked tile by {}", translateDataString);
                 final TransformSpec translateToPreHackLocationSpec =
                         new LeafTransformSpec(TranslationModel2D.class.getName(), translateDataString);
                 resolvedTiles.addTransformSpecToTile(

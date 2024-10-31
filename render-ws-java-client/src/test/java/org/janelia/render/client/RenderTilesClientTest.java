@@ -22,37 +22,21 @@ public class RenderTilesClientTest {
     public static void main(final String[] args) {
         try {
             final String[] testArgs = {
-                    "--baseDataUrl", "http://renderer-dev.int.janelia.org:8080/render-ws/v1",
-//                    "--owner", "Z0720_07m_VNC",
-//                    "--project", "Sec07",
-//                    "--stack", "v4_acquire_trimmed_align",
-//                    "--rootDirectory", "/nrs/flyem/render/tiles",
-//                    "--z", "1817",
-//                    "--hackStack", "v4_acquire_trimmed_align_hack",
-//                    "--hackTransformCount", "1",
-
-//                    "--owner", "Z0720_07m_VNC",
-//                    "--project", "Sec19",
-//                    "--stack", "v7_acquire_trimmed_align_straightened",
-//                    "--rootDirectory", "/nrs/flyem/render/tiles",
-//                    "--z", "7547",
-//                    "--hackStack", "v7_acquire_trimmed_align_straightened_hack",
-//                    "--hackTransformCount", "1",
-//                    "--completeHackStack"
-
+                    "--baseDataUrl", "http://em-services-1.int.janelia.org:8080/render-ws/v1",
                     "--owner", "fibsem",
-                    "--project", "Z0422_17_VNC_1",
-                    "--stack", "v4_acquire_trimmed_align",
-                    "--rootDirectory", "/nrs/fibsem/render/tiles_destreak",
+                    "--project", "jrc_celegans_20240819",
+                    "--stack", "v3_acquire_align_16bit",
+                    "--rootDirectory", " /nrs/fibsem/data/jrc_celegans_20240819/tiles_destreak",
+                    "--runTimestamp", "20241031_150000",
                     "--scale", "1.0",
                     "--format", "png",
                     "--excludeMask",
                     "--excludeAllTransforms",
-                    "--filterListName", "Z0422_17_VNC_1",
-                    "--tileIdPattern", ".*0-.-2.*",
-                    "--hackStack", "v4_acquire_trimmed_align_destreak_test_b",
+                    "--filterListName", "jrc_celegans_20240819-destreak-16bit",
+                    "--hackStack", "v3_acquire_align_16bit_destreak_test",
+                    "--renderType", "SIXTEEN_BIT",
                     "--completeHackStack",
-                    "--z", "28132", "28133",
+                    "--z", "4444.0"
             };
 
             RenderTilesClient.main(testArgs);
