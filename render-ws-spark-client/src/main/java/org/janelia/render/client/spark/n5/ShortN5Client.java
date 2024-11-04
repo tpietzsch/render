@@ -228,8 +228,10 @@ public class ShortN5Client
     {
     	final short[] array = (short[])currentProcessor.getPixels();
 
-    	for ( int i = 0; i < array.length; ++i )
-    		array[ i ] = UnsignedShortType.getCodedSignedShort( 32768 - array[ i ] );
+        for (int i = 0; i < array.length; ++i) {
+            final short value = array[i];
+            array[i] = (value == 0) ? 0 : UnsignedShortType.getCodedSignedShort(32768 - array[i]);
+        }
 
     	return currentProcessor;
     }
