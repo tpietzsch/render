@@ -39,6 +39,7 @@ public class CorrectBackground {
 			final int midY = height / 2;
 
 			// fit a quadratic background model with all the points in the first slice
+			final long start = System.currentTimeMillis();
 			final QuadraticBackground backgroundModel = new QuadraticBackground();
 			final List<PointMatch> matches = new ArrayList<>();
 			final Cursor<UnsignedByteType> cursor = Views.iterable(firstSlice).localizingCursor();
@@ -51,6 +52,7 @@ public class CorrectBackground {
 			}
 			backgroundModel.fit(matches);
 			System.out.println("Fitted background model: " + backgroundModel);
+			System.out.println("Fitting took " + (System.currentTimeMillis() - start) + "ms.");
 
 			// we assume that the model is concave, so the offset is the maximum value
 			final double maxValue = backgroundModel.getCoefficients()[5];
@@ -67,7 +69,7 @@ public class CorrectBackground {
 			final RandomAccessibleInterval<FloatType> materializedBackground = Views.interval(Views.raster(background), firstSlice);
 
 			final RandomAccessibleInterval<UnsignedByteType> corrected = Converters.convert(firstSlice, materializedBackground, (s, b, o) -> {
-				o.set((int) (s.getRealDouble() / b.getRealDouble()));
+				o.set(UnsignedByteType.getCodedSignedByteChecked((int) (s.getRealDouble() / b.getRealDouble())));
 			}, new UnsignedByteType());
 
 			new ImageJ();
