@@ -111,4 +111,15 @@ public class QuadraticBackground extends AbstractModel<QuadraticBackground> {
 	public double[] getCoefficients() {
 		return coefficients;
 	}
+
+	@Override
+	public String toString() {
+		return "QuadraticBackground{ "
+				+ coefficients[0] + " * x^2 + "
+				+ coefficients[1] + " * xy + "
+				+ coefficients[2] + " * y^2 + "
+				+ coefficients[3] + " * x + "
+				+ coefficients[4] + " * y + "
+				+ coefficients[5] + " }";
+	}
 }
