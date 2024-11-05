@@ -22,6 +22,7 @@ public class CorrectBackground {
 	public static void main(final String[] args) {
 		try (final N5Reader reader = new N5FSReader(containerPath)) {
 			final Img<UnsignedByteType> stack = N5Utils.open(reader, dataset + "/s" + scale);
+			final RandomAccessibleInterval<UnsignedByteType> firstSlice = Views.hyperSlice(stack, 2, 0);
 
 			final int width = (int) stack.dimension(0);
 			final int height = (int) stack.dimension(1);
@@ -29,21 +30,22 @@ public class CorrectBackground {
 			final int midX = width / 2;
 			final int midY = height / 2;
 
-			final RealRandomAccessible<FloatType> background = new FunctionRealRandomAccessible<>(3, (pos, value) -> {
+			final RealRandomAccessible<FloatType> background = new FunctionRealRandomAccessible<>(2, (pos, value) -> {
 				final double x = (pos.getDoublePosition(0) - midX) / width;
 				final double y = (pos.getDoublePosition(1) - midY) / height;
 				value.setReal(1 - (x * x + y * y) / 2.0);
 			}, FloatType::new);
 
-			final RandomAccessibleInterval<FloatType> materializedBackground = Views.interval(Views.raster(background), stack);
 
-			final RandomAccessibleInterval<UnsignedByteType> corrected = Converters.convert(stack, materializedBackground, (s, b, o) -> {
+			final RandomAccessibleInterval<FloatType> materializedBackground = Views.interval(Views.raster(background), firstSlice);
+
+			final RandomAccessibleInterval<UnsignedByteType> corrected = Converters.convert(firstSlice, materializedBackground, (s, b, o) -> {
 				o.set((int) (s.getRealDouble() / b.getRealDouble()));
 			}, new UnsignedByteType());
 
 			new ImageJ();
-			ImageJFunctions.show(stack);
-			ImageJFunctions.show(corrected);
+			ImageJFunctions.show(firstSlice, "Original");
+			ImageJFunctions.show(corrected, "Corrected");
 		}
 	}
 }
