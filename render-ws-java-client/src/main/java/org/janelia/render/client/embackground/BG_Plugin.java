@@ -20,60 +20,56 @@ import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.view.Views;
 
-public class BG_Plugin implements PlugIn
-{
+public class BG_Plugin implements PlugIn {
+
 	public static int defaultType = 0;
 	public static String[] fitTypes = new String[] { "Quadratic", "Fourth Order" };
 
 	@Override
-	public void run(String arg)
-	{
-		Roi rois = getROIs();
+	public void run(final String arg) {
+		final Roi rois = getROIs();
 
-		if ( rois == null )
+		if (rois == null) {
 			return;
+		}
 
-		GenericDialog gd = new GenericDialog( "fit..." );
+		final GenericDialog gd = new GenericDialog("fit...");
 
-		gd.addChoice( "fit_type", fitTypes, fitTypes[ defaultType ]);
+		gd.addChoice("fit_type", fitTypes, fitTypes[defaultType]);
 		gd.showDialog();
 
-		if (gd.wasCanceled() )
+		if (gd.wasCanceled()) {
 			return;
+		}
 
-		int type = defaultType = gd.getNextChoiceIndex();
+		defaultType = gd.getNextChoiceIndex();
+		final int type = gd.getNextChoiceIndex();
 
-		fit( type );
+		fit(type);
 	}
 
-	public static Roi getROIs()
-	{
-		RoiManager rm = RoiManager.getInstance();
+	public static Roi getROIs() {
+		final RoiManager rm = RoiManager.getInstance();
 
-		if (rm == null || rm.getCount() == 0)
-		{
-			IJ.log( "please define rois ... " );
+		if (rm == null || rm.getCount() == 0) {
+			IJ.log("please define rois ... ");
 			return null;
 		}
 
-		int numRois = rm.getCount();
 		return rm.getRoi( 0 );
 	}
 
-	public static void fit( int type )
-	{
-		IJ.log( "fitting with ... " + fitTypes[ type ] );
+	public static void fit(final int type) {
+		IJ.log("fitting with ... " + fitTypes[type]);
 	}
 
 	private static void showNonBlockingDialog() {
         new Thread(() -> {
-            JDialog dialog = new JDialog((JFrame)null, "Run Background plugin...", false);
+            final JDialog dialog = new JDialog((JFrame)null, "Run Background plugin...", false);
             dialog.setLayout(new FlowLayout());
 
-            JButton closeButton = new JButton("Run Background plugin...");
-            closeButton.addActionListener(e -> {
-            	new BG_Plugin().run( null );
-            });
+            final JButton closeButton = new JButton("Run Background plugin...");
+            closeButton.addActionListener(e -> new BG_Plugin().run(null ));
             dialog.add(closeButton);
 
             dialog.pack();
@@ -81,25 +77,18 @@ public class BG_Plugin implements PlugIn
         }).start();
 	}
 
-	public static void main( String[] args )
-	{
+	@SuppressWarnings({"unchecked", "rawtypes"})
+	public static void main(final String[] args) {
 		new ImageJ();
 
-		SwingUtilities.invokeLater(() ->
-		{
-			showNonBlockingDialog();
-		});
+		SwingUtilities.invokeLater(BG_Plugin::showNonBlockingDialog);
 
-		// open image
-		String n5Path = "/Volumes/public/ForPreibisch/cerebellum-3.n5";
+		final String n5Path = System.getenv("HOME") + "/big-data/render-exports/cerebellum-3.n5";
+		RandomAccessibleInterval img = N5Utils.open(new N5FSReader(n5Path), "data/s4");
+		final int z = 0;
+		img = Views.hyperSlice(img, 2, z);
+		ImageJFunctions.show(img);
 
-		RandomAccessibleInterval img = N5Utils.open( new N5FSReader( n5Path ), "data/s4" );
-		int z = 0;
-		img = Views.hyperSlice( img, 2, z );
-		ImageJFunctions.show( img );
-
-		new RoiManager(); // Create a new instance
-		//
-		//new BG_Plugin().run( null );
+		new RoiManager();
 	}
 }
