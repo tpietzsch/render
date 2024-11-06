@@ -52,7 +52,7 @@ public class CorrectBackground {
 			}
 
 			final long start = System.currentTimeMillis();
-			final FourthOrderBackground backgroundModel = fitBackgroundModel(rois, firstSlice);
+			final BackgroundModel<?> backgroundModel = fitBackgroundModel(rois, firstSlice);
 			System.out.println("Fitted background model: " + backgroundModel);
 			System.out.println("Fitting took " + (System.currentTimeMillis() - start) + "ms.");
 
@@ -88,7 +88,7 @@ public class CorrectBackground {
 
 
 	public static <T extends NativeType<T> & RealType<T>>
-	RandomAccessibleInterval<FloatType> createBackgroundImage(final FourthOrderBackground backgroundModel, final RandomAccessibleInterval<T> slice) {
+	RandomAccessibleInterval<FloatType> createBackgroundImage(final BackgroundModel<?> backgroundModel, final RandomAccessibleInterval<T> slice) {
 		final int width = (int) slice.dimension(0);
 		final int height = (int) slice.dimension(1);
 
