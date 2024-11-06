@@ -12,10 +12,12 @@ import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealRandomAccessible;
 import net.imglib2.converter.Converters;
 import net.imglib2.img.Img;
-import net.imglib2.img.array.ArrayImgs;
 import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.position.FunctionRealRandomAccessible;
+import net.imglib2.type.NativeType;
+import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
+import net.imglib2.type.numeric.integer.UnsignedShortType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.view.Views;
 import org.janelia.saalfeldlab.n5.N5FSReader;
@@ -33,81 +35,116 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 public class CorrectBackground {
-	private static final String containerPath = System.getenv("HOME") + "/big-data/render-exports/cerebellum-3.n5";
-	private static final String roiPath = containerPath + "/roi-set.zip";
-	private static final String dataset = "data";
-	private static final int scale = 4;
 
 	public static void main(final String[] args) throws NotEnoughDataPointsException, IllDefinedDataPointsException, IOException {
+		final String containerPath = System.getenv("HOME") + "/big-data/render-exports/cerebellum-3.n5";
+		final String roiPath = containerPath + "/roi-set.zip";
+		final String dataset = "data";
+		final int scale = 4;
+
 		try (final N5Reader reader = new N5FSReader(containerPath)) {
 			final Img<UnsignedByteType> stack = N5Utils.open(reader, dataset + "/s" + scale);
 			final RandomAccessibleInterval<UnsignedByteType> firstSlice = Views.hyperSlice(stack, 2, 0);
-
-			final int width = (int) stack.dimension(0);
-			final int height = (int) stack.dimension(1);
-
-			final double midX = width / 2.0;
-			final double midY = height / 2.0;
-
 			final List<Roi> rois = readRois(roiPath);
+
 			if (rois.isEmpty()) {
-				throw new IllegalArgumentException("No ROIs found in " + roiPath);
+				throw new IllegalArgumentException("No ROIs found");
 			}
 
-			final Set<java.awt.Point> pointsOfInterest = new HashSet<>();
-			for (final Roi roi : rois) {
-				final java.awt.Point[] containedPoints = roi.getContainedPoints();
-				Collections.addAll(pointsOfInterest, containedPoints);
-			}
-
-			final Img<UnsignedByteType> roiImg = ArrayImgs.unsignedBytes(width, height);
-			final RandomAccess<UnsignedByteType> roiRa = roiImg.randomAccess();
-			for (final java.awt.Point point : pointsOfInterest) {
-				roiRa.setPositionAndGet(point.x, point.y).set(255);
-			}
-
-			// fit a quadratic background model with all the points in the first slice
 			final long start = System.currentTimeMillis();
-			final FourthOrderBackground backgroundModel = new FourthOrderBackground();
-			final List<PointMatch> matches = new ArrayList<>();
-			final RandomAccess<UnsignedByteType> ra = firstSlice.randomAccess();
-			for (final java.awt.Point point : pointsOfInterest) {
-				final double x = (point.x - midX) / width;
-				final double y = (point.y - midY) / height;
-				final double z = ra.setPositionAndGet(point.x, point.y).getRealDouble();
-				matches.add(new PointMatch(new Point(new double[]{x, y}), new Point(new double[]{z})));
-			}
-			backgroundModel.fit(matches);
+			final FourthOrderBackground backgroundModel = fitBackgroundModel(rois, firstSlice);
 			System.out.println("Fitted background model: " + backgroundModel);
 			System.out.println("Fitting took " + (System.currentTimeMillis() - start) + "ms.");
 
-			// we assume that the model is concave, so the offset is the maximum value
-			final double maxValue = backgroundModel.getCoefficients()[0];
-
-			// create a background image from the model
-			final double[] location = new double[2];
-			final RealRandomAccessible<FloatType> background = new FunctionRealRandomAccessible<>(2, (pos, value) -> {
-				location[0] = (pos.getDoublePosition(0) - midX) / width;
-				location[1] = (pos.getDoublePosition(1) - midY) / height;
-				backgroundModel.applyInPlace(location);
-				value.setReal(location[0] / maxValue);
-			}, FloatType::new);
-
-			final RandomAccessibleInterval<FloatType> materializedBackground = Views.interval(Views.raster(background), firstSlice);
-
-			final RandomAccessibleInterval<UnsignedByteType> corrected = Converters.convert(firstSlice, materializedBackground, (s, b, o) -> {
-				o.set(UnsignedByteType.getCodedSignedByteChecked((int) (s.getRealDouble() / b.getRealDouble())));
-			}, new UnsignedByteType());
+			final RandomAccessibleInterval<FloatType> background = createBackgroundImage(backgroundModel, firstSlice);
+			final RandomAccessibleInterval<UnsignedByteType> corrected = correctBackground(firstSlice, background, new UnsignedByteType());
 
 			new ImageJ();
 			ImageJFunctions.show(firstSlice, "Original");
-			ImageJFunctions.show(materializedBackground, "Background");
+			ImageJFunctions.show(background, "Background");
 			ImageJFunctions.show(corrected, "Corrected");
-			ImageJFunctions.show(roiImg, "ROI");
 		}
 	}
 
-	private static List<Roi> readRois(final String path) throws IOException {
+	@SuppressWarnings({"rawtypes", "unchecked"})
+	public static <T extends NativeType<T> & RealType<T>>
+	RandomAccessibleInterval<T> correctBackground(final RandomAccessibleInterval<T> slice, final RandomAccessibleInterval<FloatType> background, final T type) {
+
+		final RandomAccessibleInterval<T> corrected;
+		if (type instanceof UnsignedByteType) {
+			corrected = (RandomAccessibleInterval) Converters.convert(slice, background, (s, b, o) -> {
+				o.set(UnsignedByteType.getCodedSignedByteChecked((int) (s.getRealDouble() / b.getRealDouble())));
+			}, new UnsignedByteType());
+		} else if (type instanceof UnsignedShortType) {
+			corrected = (RandomAccessibleInterval) Converters.convert(slice, background, (s, b, o) -> {
+				o.set(UnsignedShortType.getCodedSignedShortChecked((int) (s.getRealDouble() / b.getRealDouble())));
+			}, new UnsignedShortType());
+		} else {
+			throw new IllegalArgumentException("Unsupported type: " + type.getClass());
+		}
+
+		return corrected;
+	}
+
+
+	public static <T extends NativeType<T> & RealType<T>>
+	RandomAccessibleInterval<FloatType> createBackgroundImage(final FourthOrderBackground backgroundModel, final RandomAccessibleInterval<T> slice) {
+		final int width = (int) slice.dimension(0);
+		final int height = (int) slice.dimension(1);
+
+		final double midX = width / 2.0;
+		final double midY = height / 2.0;
+
+		// we assume that the model is concave, so the offset is the maximum value
+		final double maxValue = backgroundModel.getCoefficients()[0];
+
+		final double[] location = new double[2];
+		final RealRandomAccessible<FloatType> background = new FunctionRealRandomAccessible<>(2, (pos, value) -> {
+			location[0] = (pos.getDoublePosition(0) - midX) / width;
+			location[1] = (pos.getDoublePosition(1) - midY) / height;
+			backgroundModel.applyInPlace(location);
+			value.setReal(location[0] / maxValue);
+		}, FloatType::new);
+
+		return Views.interval(Views.raster(background), slice);
+	}
+
+	public static <T extends NativeType<T> & RealType<T>>
+	FourthOrderBackground fitBackgroundModel(final List<Roi> rois, final RandomAccessibleInterval<T> slice)
+			throws NotEnoughDataPointsException, IllDefinedDataPointsException {
+		final int width = (int) slice.dimension(0);
+		final int height = (int) slice.dimension(1);
+
+		final double midX = width / 2.0;
+		final double midY = height / 2.0;
+
+		// fit a quadratic background model with all the points in the first slice
+		final FourthOrderBackground backgroundModel = new FourthOrderBackground();
+		final List<PointMatch> matches = new ArrayList<>();
+		final RandomAccess<T> ra = slice.randomAccess();
+
+		for (final java.awt.Point point : extractInterestPoints(rois)) {
+			final double x = (point.x - midX) / width;
+			final double y = (point.y - midY) / height;
+			final double z = ra.setPositionAndGet(point.x, point.y).getRealDouble();
+			matches.add(new PointMatch(new Point(new double[]{x, y}), new Point(new double[]{z})));
+		}
+		backgroundModel.fit(matches);
+
+		return backgroundModel;
+	}
+
+	private static Set<java.awt.Point> extractInterestPoints(final List<Roi> rois) {
+
+		final Set<java.awt.Point> pointsOfInterest = new HashSet<>();
+		for (final Roi roi : rois) {
+			final java.awt.Point[] containedPoints = roi.getContainedPoints();
+			Collections.addAll(pointsOfInterest, containedPoints);
+		}
+		return pointsOfInterest;
+	}
+
+	public static List<Roi> readRois(final String path) throws IOException {
 		if (path.endsWith(".zip")) {
 			return extractRoisFromZip(path);
 		} else {
