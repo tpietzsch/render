@@ -55,7 +55,7 @@ public class CorrectBackground {
 			System.out.println("Fitting took " + (System.currentTimeMillis() - start) + "ms.");
 
 			// we assume that the model is concave, so the offset is the maximum value
-			final double maxValue = backgroundModel.getCoefficients()[5];
+			final double maxValue = backgroundModel.getCoefficients()[0];
 
 			// create a background image from the model
 			final double[] location = new double[2];

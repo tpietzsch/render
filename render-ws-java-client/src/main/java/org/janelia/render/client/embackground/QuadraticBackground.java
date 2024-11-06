@@ -11,6 +11,10 @@ import org.ejml.interfaces.linsol.LinearSolverDense;
 import java.util.Arrays;
 import java.util.Collection;
 
+
+/**
+ * A quadratic model for background correction in 2D slices of EM data.
+ */
 public class QuadraticBackground extends AbstractModel<QuadraticBackground> {
 
 	private final int N_COEFFICIENTS = 6;
@@ -47,12 +51,12 @@ public class QuadraticBackground extends AbstractModel<QuadraticBackground> {
 			final double z = match.getP2().getL()[0];
 
 			// compute one row of the least-squares matrix A
-			rowA[0] = x * x;
-			rowA[1] = x * y;
-			rowA[2] = y * y;
-			rowA[3] = x;
-			rowA[4] = y;
-			rowA[5] = 1;
+			rowA[0] = 1;
+			rowA[1] = y;
+			rowA[2] = x;
+			rowA[3] = y * y;
+			rowA[4] = x * y;
+			rowA[5] = x * x;
 
 			// update upper triangle of A^T * A
 			for (int i = 0; i < N_COEFFICIENTS; i++) {
@@ -68,7 +72,7 @@ public class QuadraticBackground extends AbstractModel<QuadraticBackground> {
 		}
 
 		// set up Cholesky decomposition for A^T * A x = A^T * b (only upper triangle of A^T * A is used)
-		final LinearSolverDense<DMatrixRMaj> solver = LinearSolverFactory_DDRM.chol(3);
+		final LinearSolverDense<DMatrixRMaj> solver = LinearSolverFactory_DDRM.chol(N_COEFFICIENTS);
 		solver.setA(ATA);
 
 		// coefficients are modified in place
@@ -98,12 +102,12 @@ public class QuadraticBackground extends AbstractModel<QuadraticBackground> {
 	public void applyInPlace(final double[] location) {
 		final double x = location[0];
 		final double y = location[1];
-		final double result = coefficients[0] * x * x
-				+ coefficients[1] * x * y
-				+ coefficients[2] * y * y
-				+ coefficients[3] * x
-				+ coefficients[4] * y
-				+ coefficients[5];
+		final double result = coefficients[5] * x * x
+				+ coefficients[4] * x * y
+				+ coefficients[3] * y * y
+				+ coefficients[2] * x
+				+ coefficients[1] * y
+				+ coefficients[0];
 		location[0] = result;
 		location[1] = 0.0;
 	}
@@ -115,11 +119,11 @@ public class QuadraticBackground extends AbstractModel<QuadraticBackground> {
 	@Override
 	public String toString() {
 		return "QuadraticBackground{ "
-				+ coefficients[0] + " * x^2 + "
-				+ coefficients[1] + " * xy + "
-				+ coefficients[2] + " * y^2 + "
-				+ coefficients[3] + " * x + "
-				+ coefficients[4] + " * y + "
-				+ coefficients[5] + " }";
+				+ coefficients[5] + " x^2 + "
+				+ coefficients[4] + " xy + "
+				+ coefficients[3] + " y^2 + "
+				+ coefficients[2] + " x + "
+				+ coefficients[1] + " y + "
+				+ coefficients[0] + " }";
 	}
 }

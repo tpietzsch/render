@@ -15,7 +15,7 @@ public class QuadraticBackgroundTest {
 	@Test
 	public void simpleModelProducesCorrectResults() throws NotEnoughDataPointsException, IllDefinedDataPointsException {
 		// 0.5 * x^2 + 0.5 * y^2 + 1
-		final QuadraticBackground background = new QuadraticBackground(new double[]{0.5, 0, 0.5, 0, 0, 1});
+		final QuadraticBackground background = new QuadraticBackground(new double[]{1, 0, 0, 0.5, 0, 0.5});
 
 		final double[] location1 = new double[]{0, 0};
 		background.applyInPlace(location1);
@@ -53,8 +53,8 @@ public class QuadraticBackgroundTest {
 		final QuadraticBackground background = new QuadraticBackground();
 		background.fit(matches);
 
-		// order of coefficients: {x^2, xy, y^2, x, y, 1}
-		Assert.assertArrayEquals(new double[]{0.5, 0, 0.5, 0, 0, 0}, background.getCoefficients(), 1e-12);
+		// order of coefficients: {1, y, x, y^2, x*y, x^2}
+		Assert.assertArrayEquals(new double[]{0, 0, 0, 0.5, 0, 0.5}, background.getCoefficients(), 1e-12);
 	}
 
 	@Test
