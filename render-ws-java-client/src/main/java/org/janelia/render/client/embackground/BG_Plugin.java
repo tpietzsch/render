@@ -28,6 +28,11 @@ public class BG_Plugin implements PlugIn
 	@Override
 	public void run(String arg)
 	{
+		Roi rois = getROIs();
+
+		if ( rois == null )
+			return;
+
 		GenericDialog gd = new GenericDialog( "fit..." );
 
 		gd.addChoice( "fit_type", fitTypes, fitTypes[ defaultType ]);
