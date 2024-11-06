@@ -52,7 +52,8 @@ public class CorrectBackground {
 			}
 
 			final long start = System.currentTimeMillis();
-			final BackgroundModel<?> backgroundModel = fitBackgroundModel(rois, firstSlice);
+			final BackgroundModel<?> backgroundModel = new FourthOrderBackground();
+			fitBackgroundModel(rois, firstSlice, backgroundModel);
 			System.out.println("Fitted background model: " + backgroundModel);
 			System.out.println("Fitting took " + (System.currentTimeMillis() - start) + "ms.");
 
@@ -110,7 +111,7 @@ public class CorrectBackground {
 	}
 
 	public static <T extends NativeType<T> & RealType<T>>
-	FourthOrderBackground fitBackgroundModel(final List<Roi> rois, final RandomAccessibleInterval<T> slice)
+	void fitBackgroundModel(final List<Roi> rois, final RandomAccessibleInterval<T> slice, final BackgroundModel<?> backgroundModel)
 			throws NotEnoughDataPointsException, IllDefinedDataPointsException {
 		final int width = (int) slice.dimension(0);
 		final int height = (int) slice.dimension(1);
@@ -119,7 +120,6 @@ public class CorrectBackground {
 		final double midY = height / 2.0;
 
 		// fit a quadratic background model with all the points in the first slice
-		final FourthOrderBackground backgroundModel = new FourthOrderBackground();
 		final List<PointMatch> matches = new ArrayList<>();
 		final RandomAccess<T> ra = slice.randomAccess();
 
@@ -130,8 +130,6 @@ public class CorrectBackground {
 			matches.add(new PointMatch(new Point(new double[]{x, y}), new Point(new double[]{z})));
 		}
 		backgroundModel.fit(matches);
-
-		return backgroundModel;
 	}
 
 	private static Set<java.awt.Point> extractInterestPoints(final List<Roi> rois) {
