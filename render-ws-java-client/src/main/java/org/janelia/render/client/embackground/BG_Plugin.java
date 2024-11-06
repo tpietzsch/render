@@ -57,9 +57,7 @@ public class BG_Plugin implements PlugIn
 		}
 
 		int numRois = rm.getCount();
-		Roi r = null;
-
-		return r;
+		return rm.getRoi( 0 );
 	}
 
 	public static void fit( int type )
@@ -99,7 +97,8 @@ public class BG_Plugin implements PlugIn
 		int z = 0;
 		img = Views.hyperSlice( img, 2, z );
 		ImageJFunctions.show( img );
-		
+
+		new RoiManager(); // Create a new instance
 		//
 		//new BG_Plugin().run( null );
 	}
