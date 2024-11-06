@@ -1,6 +1,8 @@
 package org.janelia.render.client.embackground;
 
 import ij.ImageJ;
+import ij.gui.Roi;
+import ij.io.RoiDecoder;
 import mpicbg.models.IllDefinedDataPointsException;
 import mpicbg.models.NotEnoughDataPointsException;
 import mpicbg.models.Point;
@@ -19,15 +21,20 @@ import org.janelia.saalfeldlab.n5.N5FSReader;
 import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.List;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 public class CorrectBackground {
 	private static final String containerPath = System.getenv("HOME") + "/big-data/render-exports/cerebellum-3.n5";
+	private static final String roiPath = containerPath + "/roi-set.zip";
 	private static final String dataset = "data";
 	private static final int scale = 4;
 
-	public static void main(final String[] args) throws NotEnoughDataPointsException, IllDefinedDataPointsException {
+	public static void main(final String[] args) throws NotEnoughDataPointsException, IllDefinedDataPointsException, IOException {
 		try (final N5Reader reader = new N5FSReader(containerPath)) {
 			final Img<UnsignedByteType> stack = N5Utils.open(reader, dataset + "/s" + scale);
 			final RandomAccessibleInterval<UnsignedByteType> firstSlice = Views.hyperSlice(stack, 2, 0);
@@ -38,9 +45,14 @@ public class CorrectBackground {
 			final int midX = width / 2;
 			final int midY = height / 2;
 
+			final List<Roi> rois = readRois(roiPath);
+			if (rois.isEmpty()) {
+				throw new IllegalArgumentException("No ROIs found in " + roiPath);
+			}
+
 			// fit a quadratic background model with all the points in the first slice
 			final long start = System.currentTimeMillis();
-			final QuadraticBackground backgroundModel = new QuadraticBackground();
+			final FourthOrderBackground backgroundModel = new FourthOrderBackground();
 			final List<PointMatch> matches = new ArrayList<>();
 			final Cursor<UnsignedByteType> cursor = Views.iterable(firstSlice).localizingCursor();
 			while (cursor.hasNext()) {
@@ -77,5 +89,38 @@ public class CorrectBackground {
 			ImageJFunctions.show(materializedBackground, "Background");
 			ImageJFunctions.show(corrected, "Corrected");
 		}
+	}
+
+	private static List<Roi> readRois(final String path) throws IOException {
+		if (path.endsWith(".zip")) {
+			return extractRoisFromZip(path);
+		} else {
+			final RoiDecoder rd = new RoiDecoder(path);
+			final Roi roi = rd.getRoi();
+			return List.of(roi);
+		}
+	}
+
+	private static List<Roi> extractRoisFromZip(final String path) throws IOException {
+		final List<Roi> rois = new ArrayList<>();
+
+		try (final ZipFile zipFile = new ZipFile(path)) {
+			final Enumeration<? extends ZipEntry> entries = zipFile.entries();
+
+			while (entries.hasMoreElements()) {
+				final ZipEntry entry = entries.nextElement();
+				final String name = entry.getName();
+
+				if (name.endsWith(".roi")) {
+					final RoiDecoder rd = new RoiDecoder(zipFile.getInputStream(entry).readAllBytes(), entry.getName());
+					final Roi roi = rd.getRoi();
+					if (roi != null) {
+						rois.add(roi);
+					}
+				}
+			}
+		}
+
+		return rois;
 	}
 }
