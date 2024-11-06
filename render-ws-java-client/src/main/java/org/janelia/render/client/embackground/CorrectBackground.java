@@ -7,11 +7,12 @@ import mpicbg.models.IllDefinedDataPointsException;
 import mpicbg.models.NotEnoughDataPointsException;
 import mpicbg.models.Point;
 import mpicbg.models.PointMatch;
-import net.imglib2.Cursor;
+import net.imglib2.RandomAccess;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealRandomAccessible;
 import net.imglib2.converter.Converters;
 import net.imglib2.img.Img;
+import net.imglib2.img.array.ArrayImgs;
 import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.position.FunctionRealRandomAccessible;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
@@ -23,8 +24,11 @@ import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Enumeration;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -42,24 +46,35 @@ public class CorrectBackground {
 			final int width = (int) stack.dimension(0);
 			final int height = (int) stack.dimension(1);
 
-			final int midX = width / 2;
-			final int midY = height / 2;
+			final double midX = width / 2.0;
+			final double midY = height / 2.0;
 
 			final List<Roi> rois = readRois(roiPath);
 			if (rois.isEmpty()) {
 				throw new IllegalArgumentException("No ROIs found in " + roiPath);
 			}
 
+			final Set<java.awt.Point> pointsOfInterest = new HashSet<>();
+			for (final Roi roi : rois) {
+				final java.awt.Point[] containedPoints = roi.getContainedPoints();
+				Collections.addAll(pointsOfInterest, containedPoints);
+			}
+
+			final Img<UnsignedByteType> roiImg = ArrayImgs.unsignedBytes(width, height);
+			final RandomAccess<UnsignedByteType> roiRa = roiImg.randomAccess();
+			for (final java.awt.Point point : pointsOfInterest) {
+				roiRa.setPositionAndGet(point.x, point.y).set(255);
+			}
+
 			// fit a quadratic background model with all the points in the first slice
 			final long start = System.currentTimeMillis();
 			final FourthOrderBackground backgroundModel = new FourthOrderBackground();
 			final List<PointMatch> matches = new ArrayList<>();
-			final Cursor<UnsignedByteType> cursor = Views.iterable(firstSlice).localizingCursor();
-			while (cursor.hasNext()) {
-				cursor.fwd();
-				final double x = (cursor.getDoublePosition(0) - midX) / width;
-				final double y = (cursor.getDoublePosition(1) - midY) / height;
-				final double z = cursor.get().getRealDouble();
+			final RandomAccess<UnsignedByteType> ra = firstSlice.randomAccess();
+			for (final java.awt.Point point : pointsOfInterest) {
+				final double x = (point.x - midX) / width;
+				final double y = (point.y - midY) / height;
+				final double z = ra.setPositionAndGet(point.x, point.y).getRealDouble();
 				matches.add(new PointMatch(new Point(new double[]{x, y}), new Point(new double[]{z})));
 			}
 			backgroundModel.fit(matches);
@@ -88,6 +103,7 @@ public class CorrectBackground {
 			ImageJFunctions.show(firstSlice, "Original");
 			ImageJFunctions.show(materializedBackground, "Background");
 			ImageJFunctions.show(corrected, "Corrected");
+			ImageJFunctions.show(roiImg, "ROI");
 		}
 	}
 
