@@ -13,6 +13,32 @@ import java.util.List;
 public class QuadraticBackgroundTest {
 
 	@Test
+	public void simpleModelProducesCorrectResults() throws NotEnoughDataPointsException, IllDefinedDataPointsException {
+		// 0.5 * x^2 + 0.5 * y^2 + 1
+		final QuadraticBackground background = new QuadraticBackground(new double[]{0.5, 0, 0.5, 0, 0, 1});
+
+		final double[] location1 = new double[]{0, 0};
+		background.applyInPlace(location1);
+		Assert.assertEquals(1, location1[0], 1e-12);
+
+		final double[] location2 = new double[]{1, 1};
+		background.applyInPlace(location2);
+		Assert.assertEquals(2, location2[0], 1e-12);
+
+		final double[] location3 = new double[]{-1, 1};
+		background.applyInPlace(location3);
+		Assert.assertEquals(2, location3[0], 1e-12);
+
+		final double[] location4 = new double[]{1, 0};
+		background.applyInPlace(location4);
+		Assert.assertEquals(1.5, location4[0], 1e-12);
+
+		final double[] location5 = new double[]{0, 1};
+		background.applyInPlace(location5);
+		Assert.assertEquals(1.5, location5[0], 1e-12);
+	}
+
+	@Test
 	public void simpleModelIsComputedCorrectly() throws NotEnoughDataPointsException, IllDefinedDataPointsException {
 		final List<PointMatch> matches = new ArrayList<>();
 
