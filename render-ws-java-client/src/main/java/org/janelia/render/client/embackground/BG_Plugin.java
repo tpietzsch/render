@@ -29,6 +29,7 @@ import net.imglib2.view.Views;
 public class BG_Plugin implements PlugIn {
 
 	public static int defaultType = 0;
+	public static boolean defaultShowBackground = false;
 	public static String[] fitTypes = new String[] { "Quadratic", "Fourth Order" };
 
 	public static RandomAccessibleInterval<UnsignedByteType> img;
@@ -45,6 +46,7 @@ public class BG_Plugin implements PlugIn {
 		final GenericDialog gd = new GenericDialog("Fit background correction");
 
 		gd.addChoice("Fit type", fitTypes, fitTypes[defaultType]);
+		gd.addCheckbox("Show background image", defaultShowBackground);
 		gd.showDialog();
 
 		if (gd.wasCanceled()) {
@@ -54,8 +56,11 @@ public class BG_Plugin implements PlugIn {
 		final int type = gd.getNextChoiceIndex();
 		defaultType = type;
 
+		final boolean showBackground = gd.getNextBoolean();
+		defaultShowBackground = showBackground;
+
 		try {
-			fit(type, rois);
+			fit(type, rois, showBackground);
 		} catch (final NotEnoughDataPointsException | IllDefinedDataPointsException e) {
 			IJ.log("Fitting failed: " + e.getMessage());
 		}
@@ -72,7 +77,7 @@ public class BG_Plugin implements PlugIn {
 		return Arrays.asList(rm.getRoisAsArray());
 	}
 
-	public static void fit(final int type, final List<Roi> rois) throws NotEnoughDataPointsException, IllDefinedDataPointsException {
+	public static void fit(final int type, final List<Roi> rois, final boolean showBackground) throws NotEnoughDataPointsException, IllDefinedDataPointsException {
 		IJ.log("Fitting with " + fitTypes[type] + " model...");
 
 		final BackgroundModel<?> backgroundModel;
@@ -93,7 +98,9 @@ public class BG_Plugin implements PlugIn {
 		final RandomAccessibleInterval<FloatType> background = CorrectBackground.createBackgroundImage(backgroundModel, img);
 		final RandomAccessibleInterval<UnsignedByteType> corrected = CorrectBackground.correctBackground(img, background, new UnsignedByteType());
 
-		ImageJFunctions.show(background, "Background");
+		if (showBackground) {
+			ImageJFunctions.show(background, "Background");
+		}
 		ImageJFunctions.show(corrected, "Corrected");
 
 	}
