@@ -37,6 +37,29 @@ public abstract class BackgroundModel<T extends BackgroundModel<T>> extends Abst
 		return coefficients;
 	}
 
+	/**
+	 * Normalize the model so that it approximately integrates to zero over [-1, 1] x [-1, 1].
+	 * This assumes that the constant term is stored in the first coefficient.
+	 */
+	public void normalize() {
+		final int N = 10 * nCoefficients();
+		final double[] location = new double[2];
+		double avg = 0;
+
+		// approximate integral over [-1, 1] x [-1, 1] by averaging the function values at a grid of points
+		for (int i = 0; i < N; i++) {
+			for (int j = 0; j < N; j++) {
+				location[0] = 2.0 * i / N - 1.0;
+				location[1] = 2.0 * j / N - 1.0;
+				applyInPlace(location);
+				avg += location[0];
+			}
+		}
+
+		avg /= (N * N);
+		coefficients[0] -= avg;
+	}
+
 	@Override
 	public int getMinNumMatches() {
 		return nCoefficients();

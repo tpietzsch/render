@@ -37,6 +37,7 @@ import java.util.zip.ZipFile;
 public class CorrectBackground {
 
 	public static void main(final String[] args) throws NotEnoughDataPointsException, IllDefinedDataPointsException, IOException {
+
 		final String containerPath = System.getenv("HOME") + "/big-data/render-exports/cerebellum-3.n5";
 		final String roiPath = containerPath + "/roi-set.zip";
 		final String dataset = "data";
@@ -74,11 +75,11 @@ public class CorrectBackground {
 		final RandomAccessibleInterval<T> corrected;
 		if (type instanceof UnsignedByteType) {
 			corrected = (RandomAccessibleInterval) Converters.convert(slice, background, (s, b, o) -> {
-				o.set(UnsignedByteType.getCodedSignedByteChecked((int) (s.getRealDouble() / b.getRealDouble())));
+				o.set(UnsignedByteType.getCodedSignedByteChecked((int) (s.getRealDouble() - b.getRealDouble())));
 			}, new UnsignedByteType());
 		} else if (type instanceof UnsignedShortType) {
 			corrected = (RandomAccessibleInterval) Converters.convert(slice, background, (s, b, o) -> {
-				o.set(UnsignedShortType.getCodedSignedShortChecked((int) (s.getRealDouble() / b.getRealDouble())));
+				o.set(UnsignedShortType.getCodedSignedShortChecked((int) (s.getRealDouble() - b.getRealDouble())));
 			}, new UnsignedShortType());
 		} else {
 			throw new IllegalArgumentException("Unsupported type: " + type.getClass());
@@ -87,24 +88,19 @@ public class CorrectBackground {
 		return corrected;
 	}
 
-
 	public static <T extends NativeType<T> & RealType<T>>
 	RandomAccessibleInterval<FloatType> createBackgroundImage(final BackgroundModel<?> backgroundModel, final RandomAccessibleInterval<T> slice) {
-		final int width = (int) slice.dimension(0);
-		final int height = (int) slice.dimension(1);
 
-		final double midX = width / 2.0;
-		final double midY = height / 2.0;
-
-		// we assume that the model is concave, so the offset is the maximum value
-		final double maxValue = backgroundModel.getCoefficients()[0];
+		// transform pixel coordinates into [-1, 1] x [-1, 1]
+		final double scaleX = slice.dimension(0) / 2.0;
+		final double scaleY = slice.dimension(1) / 2.0;
 
 		final double[] location = new double[2];
 		final RealRandomAccessible<FloatType> background = new FunctionRealRandomAccessible<>(2, (pos, value) -> {
-			location[0] = (pos.getDoublePosition(0) - midX) / width;
-			location[1] = (pos.getDoublePosition(1) - midY) / height;
+			location[0] = (pos.getDoublePosition(0) - scaleX) / scaleX;
+			location[1] = (pos.getDoublePosition(1) - scaleY) / scaleY;
 			backgroundModel.applyInPlace(location);
-			value.setReal(location[0] / maxValue);
+			value.setReal(location[0]);
 		}, FloatType::new);
 
 		return Views.interval(Views.raster(background), slice);
@@ -113,23 +109,23 @@ public class CorrectBackground {
 	public static <T extends NativeType<T> & RealType<T>>
 	void fitBackgroundModel(final List<Roi> rois, final RandomAccessibleInterval<T> slice, final BackgroundModel<?> backgroundModel)
 			throws NotEnoughDataPointsException, IllDefinedDataPointsException {
-		final int width = (int) slice.dimension(0);
-		final int height = (int) slice.dimension(1);
 
-		final double midX = width / 2.0;
-		final double midY = height / 2.0;
+		// transform pixel coordinates into [-1, 1] x [-1, 1]
+		final double scaleX = slice.dimension(0) / 2.0;
+		final double scaleY = slice.dimension(1) / 2.0;
 
 		// fit a quadratic background model with all the points in the first slice
 		final List<PointMatch> matches = new ArrayList<>();
 		final RandomAccess<T> ra = slice.randomAccess();
 
 		for (final java.awt.Point point : extractInterestPoints(rois)) {
-			final double x = (point.x - midX) / width;
-			final double y = (point.y - midY) / height;
+			final double x = (point.x - scaleX) / scaleX;
+			final double y = (point.y - scaleY) / scaleY;
 			final double z = ra.setPositionAndGet(point.x, point.y).getRealDouble();
 			matches.add(new PointMatch(new Point(new double[]{x, y}), new Point(new double[]{z})));
 		}
 		backgroundModel.fit(matches);
+		backgroundModel.normalize();
 	}
 
 	private static Set<java.awt.Point> extractInterestPoints(final List<Roi> rois) {
