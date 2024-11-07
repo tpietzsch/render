@@ -8,6 +8,7 @@ import org.ejml.data.DMatrixRMaj;
 import org.ejml.dense.row.factory.LinearSolverFactory_DDRM;
 import org.ejml.interfaces.linsol.LinearSolverDense;
 
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.List;
 
@@ -15,7 +16,7 @@ import java.util.List;
 /**
  * An abstract base model for background correction in 2D slices of EM data.
  */
-public abstract class BackgroundModel<T extends BackgroundModel<T>> extends AbstractModel<T> {
+public abstract class BackgroundModel<T extends BackgroundModel<T>> extends AbstractModel<T> implements Serializable {
 
 	private final double[] coefficients;
 
