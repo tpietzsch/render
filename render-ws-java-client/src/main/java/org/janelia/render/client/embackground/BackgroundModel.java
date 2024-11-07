@@ -94,16 +94,25 @@ public abstract class BackgroundModel<T extends BackgroundModel<T>> extends Abst
 
 	@Override
 	public String toString() {
-		final StringBuilder sb = new StringBuilder("BackgroundModel{ ");
+		final StringBuilder sb = new StringBuilder("BackgroundModel{");
 
-		for (int i = nCoefficients() - 1; i > 0; i--) {
-			sb.append(coefficients[i])
-					.append(" ")
-					.append(coefficientNames().get(i))
-					.append(" + ");
+		if (coefficients[nCoefficients() - 1] < 0) {
+			sb.append("-");
 		}
 
-		sb.append(coefficients[0]);
+		for (int i = nCoefficients() - 1; i > 0; i--) {
+			sb.append(String.format("%.2f", Math.abs(coefficients[i])))
+					.append(" ")
+					.append(coefficientNames().get(i));
+
+			if (coefficients[i - 1] >= 0) {
+				sb.append(" + ");
+			} else {
+				sb.append(" - ");
+			}
+		}
+
+		sb.append(String.format("%.2f", Math.abs(coefficients[0])));
 		return sb.append("}").toString();
 	}
 }

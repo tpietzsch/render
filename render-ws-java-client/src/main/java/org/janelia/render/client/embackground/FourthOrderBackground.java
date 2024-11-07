@@ -44,7 +44,7 @@ public class FourthOrderBackground extends BackgroundModel<FourthOrderBackground
 
 	@Override
 	protected List<String> coefficientNames() {
-		return List.of("x^4", "x^2 y^2", "y^4", "x^2", "xy", "y^2", "x", "y", "1");
+		return List.of("1", "y", "x", "y^2", "xy", "x^2", "y^4", "x^2 y^2", "x^4");
 	}
 
 	@Override

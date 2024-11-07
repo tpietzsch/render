@@ -38,7 +38,7 @@ public class QuadraticBackground extends BackgroundModel<QuadraticBackground> {
 
 	@Override
 	protected List<String> coefficientNames() {
-		return List.of("x^2", "xy", "y^2", "x", "y", "1");
+		return List.of("1", "y", "x", "y^2", "xy", "x^2");
 	}
 
 	@Override
