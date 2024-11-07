@@ -9,10 +9,12 @@ import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
 
+import com.beust.jcommander.Parameter;
 import mpicbg.models.IllDefinedDataPointsException;
 import mpicbg.models.NotEnoughDataPointsException;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.type.numeric.real.FloatType;
+import org.janelia.render.client.parameter.CommandLineParameters;
 import org.janelia.saalfeldlab.n5.N5FSReader;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
 
@@ -27,6 +29,24 @@ import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.view.Views;
 
 public class BG_Plugin implements PlugIn {
+
+	private static class Parameters extends CommandLineParameters {
+		@Parameter(names = "--n5Path",
+				description = "Path to the N5 container",
+				required = true)
+		public String n5Path;
+
+		@Parameter(names = "--dataset",
+				description = "Name of the dataset",
+				required = true)
+		public String dataset;
+
+		@Parameter(names = "--z",
+				description = "Z slice to process",
+				required = true)
+		public int z;
+	}
+
 
 	public static int defaultType = 0;
 	public static boolean defaultShowBackground = false;
@@ -120,14 +140,16 @@ public class BG_Plugin implements PlugIn {
 	}
 
 	public static void main(final String[] args) {
-		new ImageJ();
+		final Parameters params = new Parameters();
+		params.parse(args);
 
+		new ImageJ();
 		SwingUtilities.invokeLater(BG_Plugin::showNonBlockingDialog);
 
-		final String n5Path = System.getenv("HOME") + "/big-data/render-exports/cerebellum-3.n5";
-		img = N5Utils.open(new N5FSReader(n5Path), "data/s4");
-		final int z = 0;
-		img = Views.hyperSlice(img, 2, z);
+		img = N5Utils.open(new N5FSReader(params.n5Path), params.dataset);
+		if (img.numDimensions() > 2) {
+			img = Views.hyperSlice(img, 2, params.z);
+		}
 		ImageJFunctions.show(img);
 
 		new RoiManager();
