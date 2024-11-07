@@ -68,44 +68,6 @@ public class CorrectBackground {
 		}
 	}
 
-	@SuppressWarnings({"rawtypes", "unchecked"})
-	public static <T extends NativeType<T> & RealType<T>>
-	RandomAccessibleInterval<T> correctBackground(final RandomAccessibleInterval<T> slice, final RandomAccessibleInterval<FloatType> background, final T type) {
-
-		final RandomAccessibleInterval<T> corrected;
-		if (type instanceof UnsignedByteType) {
-			corrected = (RandomAccessibleInterval) Converters.convert(slice, background, (s, b, o) -> {
-				o.set(UnsignedByteType.getCodedSignedByteChecked((int) (s.getRealDouble() - b.getRealDouble())));
-			}, new UnsignedByteType());
-		} else if (type instanceof UnsignedShortType) {
-			corrected = (RandomAccessibleInterval) Converters.convert(slice, background, (s, b, o) -> {
-				o.set(UnsignedShortType.getCodedSignedShortChecked((int) (s.getRealDouble() - b.getRealDouble())));
-			}, new UnsignedShortType());
-		} else {
-			throw new IllegalArgumentException("Unsupported type: " + type.getClass());
-		}
-
-		return corrected;
-	}
-
-	public static <T extends NativeType<T> & RealType<T>>
-	RandomAccessibleInterval<FloatType> createBackgroundImage(final BackgroundModel<?> backgroundModel, final RandomAccessibleInterval<T> slice) {
-
-		// transform pixel coordinates into [-1, 1] x [-1, 1]
-		final double scaleX = slice.dimension(0) / 2.0;
-		final double scaleY = slice.dimension(1) / 2.0;
-
-		final double[] location = new double[2];
-		final RealRandomAccessible<FloatType> background = new FunctionRealRandomAccessible<>(2, (pos, value) -> {
-			location[0] = (pos.getDoublePosition(0) - scaleX) / scaleX;
-			location[1] = (pos.getDoublePosition(1) - scaleY) / scaleY;
-			backgroundModel.applyInPlace(location);
-			value.setReal(location[0]);
-		}, FloatType::new);
-
-		return Views.interval(Views.raster(background), slice);
-	}
-
 	public static <T extends NativeType<T> & RealType<T>>
 	void fitBackgroundModel(final List<Roi> rois, final RandomAccessibleInterval<T> slice, final BackgroundModel<?> backgroundModel)
 			throws NotEnoughDataPointsException, IllDefinedDataPointsException {
@@ -136,6 +98,44 @@ public class CorrectBackground {
 			Collections.addAll(pointsOfInterest, containedPoints);
 		}
 		return pointsOfInterest;
+	}
+
+	public static <T extends NativeType<T> & RealType<T>>
+	RandomAccessibleInterval<FloatType> createBackgroundImage(final BackgroundModel<?> backgroundModel, final RandomAccessibleInterval<T> slice) {
+
+		// transform pixel coordinates into [-1, 1] x [-1, 1]
+		final double scaleX = slice.dimension(0) / 2.0;
+		final double scaleY = slice.dimension(1) / 2.0;
+
+		final double[] location = new double[2];
+		final RealRandomAccessible<FloatType> background = new FunctionRealRandomAccessible<>(2, (pos, value) -> {
+			location[0] = (pos.getDoublePosition(0) - scaleX) / scaleX;
+			location[1] = (pos.getDoublePosition(1) - scaleY) / scaleY;
+			backgroundModel.applyInPlace(location);
+			value.setReal(location[0]);
+		}, FloatType::new);
+
+		return Views.interval(Views.raster(background), slice);
+	}
+
+	@SuppressWarnings({"rawtypes", "unchecked"})
+	public static <T extends NativeType<T> & RealType<T>>
+	RandomAccessibleInterval<T> correctBackground(final RandomAccessibleInterval<T> slice, final RandomAccessibleInterval<FloatType> background, final T type) {
+
+		final RandomAccessibleInterval<T> corrected;
+		if (type instanceof UnsignedByteType) {
+			corrected = (RandomAccessibleInterval) Converters.convert(slice, background, (s, b, o) -> {
+				o.set(UnsignedByteType.getCodedSignedByteChecked((int) (s.getRealDouble() - b.getRealDouble())));
+			}, new UnsignedByteType());
+		} else if (type instanceof UnsignedShortType) {
+			corrected = (RandomAccessibleInterval) Converters.convert(slice, background, (s, b, o) -> {
+				o.set(UnsignedShortType.getCodedSignedShortChecked((int) (s.getRealDouble() - b.getRealDouble())));
+			}, new UnsignedShortType());
+		} else {
+			throw new IllegalArgumentException("Unsupported type: " + type.getClass());
+		}
+
+		return corrected;
 	}
 
 	public static List<Roi> readRois(final String path) throws IOException {
