@@ -179,26 +179,27 @@ public class BackgroundCorrectionClient implements Serializable {
             final double yScale = dimensions[1] / 2.0;
 
             // process block z-slice by z-slice
-            final int xShift = (int) block.min(0);
-            final int yShift = (int) block.min(1);
-            final int zShift = (int) block.min(2);
-
             for (int z = (int) block.min(2); z <= block.max(2); z++) {
                 final BackgroundModel<?> model = modelProvider.getModel(z);
                 if (model == null) {
-                    LOG.info("No model found for z={}", z);
+                    LOG.warn("No model found for z={}", z);
                     continue;
                 }
 
-                final RandomAccessibleInterval<UnsignedByteType> slice = Views.hyperSlice(croppedImg, 2, z - zShift);
+                final RandomAccessibleInterval<UnsignedByteType> slice = Views.hyperSlice(croppedImg, 2, z - (int) block.min(2));
                 final Cursor<UnsignedByteType> cursor = Views.iterable(slice).localizingCursor();
                 final double[] location = new double[2];
 
                 // apply model to slice
                 while (cursor.hasNext()) {
                     final UnsignedByteType pixel = cursor.next();
-                    location[0] = (xShift + cursor.getIntPosition(0) - xScale) / xScale;
-                    location[1] = (yShift + cursor.getIntPosition(1) - yScale) / yScale;
+                    if (pixel.getInteger() == 0) {
+                        // background should not be corrected
+                        continue;
+                    }
+
+                    location[0] = (cursor.getDoublePosition(0) - xScale) / xScale;
+                    location[1] = (cursor.getDoublePosition(1) - yScale) / yScale;
 
                     model.applyInPlace(location);
                     pixel.setReal(UnsignedByteType.getCodedSignedByteChecked((int) (pixel.getRealDouble() - location[0])));
@@ -206,7 +207,7 @@ public class BackgroundCorrectionClient implements Serializable {
             }
 
             // save block
-            N5Utils.saveNonEmptyBlock(croppedImg, out, parameters.datasetOut, block.offset, new UnsignedByteType());
+            N5Utils.saveNonEmptyBlock(croppedImg, out, parameters.datasetOut, block.gridPosition, new UnsignedByteType());
         }
     }
 
@@ -260,6 +261,10 @@ public class BackgroundCorrectionClient implements Serializable {
 
             public int getZ() {
                 return fromZ;
+            }
+
+            public void setCoefficients(final double[] coefficients) {
+                this.coefficients = coefficients;
             }
 
             public BackgroundModel<?> getModel() {
