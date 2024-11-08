@@ -4,9 +4,15 @@ import com.beust.jcommander.Parameter;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
+import net.imglib2.Cursor;
+import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.img.Img;
+import net.imglib2.type.numeric.integer.UnsignedByteType;
+import net.imglib2.view.Views;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.broadcast.Broadcast;
 import org.janelia.alignment.util.Grid;
 import org.janelia.render.client.ClientRunner;
 import org.janelia.render.client.embackground.BackgroundModel;
@@ -18,6 +24,7 @@ import org.janelia.saalfeldlab.n5.N5FSReader;
 import org.janelia.saalfeldlab.n5.N5FSWriter;
 import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.N5Writer;
+import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -85,6 +92,10 @@ public class BackgroundCorrectionClient implements Serializable {
         public String parameterFile;
     }
 
+    private static final Logger LOG = LoggerFactory.getLogger(BackgroundCorrectionClient.class);
+
+    private final Parameters parameters;
+
     public static void main(final String[] args) {
         final ClientRunner clientRunner = new ClientRunner(args) {
             @Override
@@ -98,7 +109,6 @@ public class BackgroundCorrectionClient implements Serializable {
         clientRunner.run();
     }
 
-    private final Parameters parameters;
 
     public BackgroundCorrectionClient(final Parameters parameters) {
         LOG.info("init: parameters={}", parameters);
@@ -120,7 +130,6 @@ public class BackgroundCorrectionClient implements Serializable {
 
         // read parameters
         final BackgroundModelProvider modelProvider = BackgroundModelProvider.fromJsonFile(parameters.parameterFile);
-        System.exit(0);
 
         // set up input and output N5 datasets
         final DatasetAttributes inputAttributes;
@@ -143,15 +152,62 @@ public class BackgroundCorrectionClient implements Serializable {
         }
 
         // parallelize computation over blocks of the input/output dataset
+        final Broadcast<BackgroundModelProvider> modelProviderBroadcast = sparkContext.broadcast(modelProvider);
+        final Broadcast<Parameters> parametersBroadcast = sparkContext.broadcast(parameters);
+
         final List<Grid.Block> blocks = Grid.create(inputAttributes.getDimensions(), inputAttributes.getBlockSize());
         final JavaRDD<Grid.Block> blockRDD = sparkContext.parallelize(blocks, blocks.size());
-//        blockRDD.foreach(block -> processSingleBlock(parameters, models));
+
+        blockRDD.foreach(block -> processSingleBlock(parametersBroadcast.value(), modelProviderBroadcast.value(), block));
 
         LOG.info("runWithContext: exit");
     }
 
-    private static void processSingleBlock(final Parameters parameters, final Map<Integer, BackgroundModel<?>> models) {
+    private static void processSingleBlock(final Parameters parameters, final BackgroundModelProvider modelProvider, final Grid.Block block) {
+        LOG.info("processSingleBlock: block={}", block);
 
+        try (final N5Reader in = new N5FSReader(parameters.n5In);
+             final N5Writer out = new N5FSWriter(parameters.n5Out)) {
+
+            // load block
+            final Img<UnsignedByteType> img = N5Utils.open(in, parameters.datasetIn);
+            final RandomAccessibleInterval<UnsignedByteType> croppedImg = Views.interval(img, block);
+            final long[] dimensions = in.getDatasetAttributes(parameters.datasetIn).getDimensions();
+
+            // scale pixel coordinates to [-1, 1] x [-1, 1]
+            final double xScale = dimensions[0] / 2.0;
+            final double yScale = dimensions[1] / 2.0;
+
+            // process block z-slice by z-slice
+            final int xShift = (int) block.min(0);
+            final int yShift = (int) block.min(1);
+            final int zShift = (int) block.min(2);
+
+            for (int z = (int) block.min(2); z <= block.max(2); z++) {
+                final BackgroundModel<?> model = modelProvider.getModel(z);
+                if (model == null) {
+                    LOG.info("No model found for z={}", z);
+                    continue;
+                }
+
+                final RandomAccessibleInterval<UnsignedByteType> slice = Views.hyperSlice(croppedImg, 2, z - zShift);
+                final Cursor<UnsignedByteType> cursor = Views.iterable(slice).localizingCursor();
+                final double[] location = new double[2];
+
+                // apply model to slice
+                while (cursor.hasNext()) {
+                    final UnsignedByteType pixel = cursor.next();
+                    location[0] = (xShift + cursor.getIntPosition(0) - xScale) / xScale;
+                    location[1] = (yShift + cursor.getIntPosition(1) - yScale) / yScale;
+
+                    model.applyInPlace(location);
+                    pixel.setReal(UnsignedByteType.getCodedSignedByteChecked((int) (pixel.getRealDouble() - location[0])));
+                }
+            }
+
+            // save block
+            N5Utils.saveNonEmptyBlock(croppedImg, out, parameters.datasetOut, block.offset, new UnsignedByteType());
+        }
     }
 
 
@@ -179,7 +235,7 @@ public class BackgroundCorrectionClient implements Serializable {
             }
         }
 
-        public static BackgroundModelProvider fromJson(final JsonElement jsonData) throws IOException {
+        public static BackgroundModelProvider fromJson(final JsonElement jsonData) {
 
             final List<ModelSpec> modelSpecs = new ArrayList<>();
             Collections.addAll(modelSpecs, new Gson().fromJson(jsonData, ModelSpec[].class));
@@ -194,7 +250,8 @@ public class BackgroundCorrectionClient implements Serializable {
         }
 
 
-        private static class ModelSpec implements Serializable {
+        @SuppressWarnings("unused")
+		private static class ModelSpec implements Serializable {
             private int fromZ;
             private String modelType;
             private double[] coefficients;
@@ -220,6 +277,4 @@ public class BackgroundCorrectionClient implements Serializable {
             }
         }
     }
-
-    private static final Logger LOG = LoggerFactory.getLogger(BackgroundCorrectionClient.class);
 }
