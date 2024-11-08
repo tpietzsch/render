@@ -1,9 +1,8 @@
 package org.janelia.render.client.spark.intensityadjust;
 
 import com.beust.jcommander.Parameter;
-import com.google.gson.JsonArray;
+import com.google.gson.Gson;
 import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
@@ -26,6 +25,9 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -39,21 +41,19 @@ import java.util.Map;
  * Models are specified by an identifier ("quadratic" or "fourthOrder") and a list of coefficients (6 or 9,
  * respectively). Coefficients can be found interactively using {@link org.janelia.render.client.embackground.BG_Plugin}.
  * </p>
- * In particular, the parameter file should have the following format. There is one root object with a single key
- * "models". The value of this key is an array of objects, each with three keys: "z", "model", and "coefficients"s, e.g.:
+ * In particular, the parameter file should have the following format. There is one root array, whose elements have
+ * exactly keys: "fromZ", "modelType", and "coefficients"s, e.g.:
  * <pre>
- * {
- *    "models": [ {
- *          "z": 0,
- *          "model": "quadratic",
- *          "coefficients": [1.0, 0.0, 1.0, 0.0, 0.0, 0.0]
- *       }, {
- *          "z": 10,
- *          "model": "fourthOrder",
- *          "coefficients": [1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
- *       }
- *    ]
- * }
+ * [ {
+ *     "fromZ": 1,
+ *     "modelType": "quadratic",
+ *     "coefficients": [ 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 ]
+ *   }, {
+ *     "fromZ": 3,
+ *     "modelType": "fourthOrder",
+ *     "coefficients": [ 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0
+ *   }
+ * ]
  * </pre>
  */
 public class BackgroundCorrectionClient implements Serializable {
@@ -119,7 +119,7 @@ public class BackgroundCorrectionClient implements Serializable {
         LOG.info("runWithContext: entry");
 
         // read parameters
-        final BackgroundModelProvider modelProvider = BackgroundModelProvider.fromFile(parameters.parameterFile);
+        final BackgroundModelProvider modelProvider = BackgroundModelProvider.fromJsonFile(parameters.parameterFile);
         System.exit(0);
 
         // set up input and output N5 datasets
@@ -156,55 +156,68 @@ public class BackgroundCorrectionClient implements Serializable {
 
 
     private static class BackgroundModelProvider implements Serializable {
-        private final List<Integer> zValues;
-        private final List<BackgroundModel<?>> models;
+        private final List<ModelSpec> sortedModelSpecs;
 
-        private BackgroundModelProvider(final List<Integer> zValues, final List<BackgroundModel<?>> models) {
-            this.zValues = zValues;
-            this.models = models;
+        private BackgroundModelProvider(final List<ModelSpec> modelSpecs) {
+            this.sortedModelSpecs = modelSpecs;
+            this.sortedModelSpecs.sort(Collections.reverseOrder(Comparator.comparingInt(ModelSpec::getZ)));
         }
 
         public BackgroundModel<?> getModel(final int z) {
-            for (int i = 0; i < zValues.size() - 1; i++) {
-                if (z >= zValues.get(i) && z < zValues.get(i + 1)) {
-                    return models.get(i);
+            for (final ModelSpec modelSpec : sortedModelSpecs) {
+                if (z >= modelSpec.getZ()) {
+                    return modelSpec.getModel();
                 }
             }
             return null;
         }
 
-
-        public static BackgroundModelProvider fromFile(final String fileName) throws IOException {
-
-            final List<Integer> zValues = new ArrayList<>();
-            final List<BackgroundModel<?>> models = new ArrayList<>();
-
-            final JsonArray root;
+        public static BackgroundModelProvider fromJsonFile(final String fileName) throws IOException {
+            LOG.info("Reading model specs from file: {}", fileName);
             try (final FileReader reader = new FileReader(fileName)) {
-                root = JsonParser.parseReader(reader).getAsJsonObject().getAsJsonArray("models");
+                return fromJson(JsonParser.parseReader(reader));
+            }
+        }
+
+        public static BackgroundModelProvider fromJson(final JsonElement jsonData) throws IOException {
+
+            final List<ModelSpec> modelSpecs = new ArrayList<>();
+            Collections.addAll(modelSpecs, new Gson().fromJson(jsonData, ModelSpec[].class));
+
+            // validation of json data
+            for (final ModelSpec modelSpec : modelSpecs) {
+                LOG.info("Found model spec: {}", modelSpec);
+                final BackgroundModel<?> ignored = modelSpec.getModel();
             }
 
-            for (final JsonElement jsonElement : root) {
-                final JsonObject parameterSet = jsonElement.getAsJsonObject();
-                final int z = parameterSet.get("fromZ").getAsInt();
-                final String modelType = parameterSet.get("model").getAsString();
-                final double[] coefficients = parameterSet.getAsJsonArray("coefficients").asList().stream()
-                        .map(JsonElement::getAsDouble)
-                        .mapToDouble(Double::doubleValue).toArray();
+            return new BackgroundModelProvider(modelSpecs);
+        }
 
-                LOG.info("Extract model from parameters file: fromZ={}, modelType={}, coefficients={}", z, modelType, coefficients);
 
-                zValues.add(z);
+        private static class ModelSpec implements Serializable {
+            private int fromZ;
+            private String modelType;
+            private double[] coefficients;
+
+            // no explicit constructor; meant to be deserialized from json
+
+            public int getZ() {
+                return fromZ;
+            }
+
+            public BackgroundModel<?> getModel() {
                 if (modelType.equals("quadratic")) {
-                    models.add(new QuadraticBackground(coefficients));
+                    return new QuadraticBackground(coefficients);
                 } else if (modelType.equals("fourthOrder")) {
-                    models.add(new FourthOrderBackground(coefficients));
+                    return new FourthOrderBackground(coefficients);
                 } else {
                     throw new IllegalArgumentException("Unknown model type: " + modelType);
                 }
             }
 
-            return new BackgroundModelProvider(zValues, models);
+            public String toString() {
+                return "ModelSpec{fromZ=" + fromZ + ", modelType=" + modelType + ", coefficients=" + Arrays.toString(coefficients) + "}";
+            }
         }
     }
 
