@@ -1,12 +1,10 @@
 package org.janelia.render.client.embackground;
 
-import java.awt.FlowLayout;
+import java.awt.*;
+import java.awt.event.KeyEvent;
 import java.util.Arrays;
 import java.util.List;
 
-import javax.swing.JButton;
-import javax.swing.JDialog;
-import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
 
 import com.beust.jcommander.Parameter;
@@ -51,8 +49,6 @@ public class BG_Plugin implements PlugIn {
 	public static int defaultType = 0;
 	public static boolean defaultShowBackground = false;
 	public static String[] fitTypes = new String[] { "Quadratic", "Fourth Order" };
-
-	public static RandomAccessibleInterval<UnsignedByteType> img;
 
 	@Override
 	public void run(final String arg) {
@@ -110,6 +106,7 @@ public class BG_Plugin implements PlugIn {
 		}
 
 		final long start = System.currentTimeMillis();
+		final RandomAccessibleInterval<UnsignedByteType> img = ImageJFunctions.wrap(IJ.getImage());
 		CorrectBackground.fitBackgroundModel(rois, img, backgroundModel);
 		IJ.log("Fitted background model: " + backgroundModel);
 		IJ.log("Fitting took " + (System.currentTimeMillis() - start) + "ms.");
@@ -125,18 +122,23 @@ public class BG_Plugin implements PlugIn {
 
 	}
 
-	private static void showNonBlockingDialog() {
-        new Thread(() -> {
-            final JDialog dialog = new JDialog((JFrame)null, "Run Background plugin...", false);
-            dialog.setLayout(new FlowLayout());
+	private static void addKeyListener() {
+		System.out.println("Mapped 'Background Correction' to F1.");
 
-            final JButton closeButton = new JButton("Run Background plugin...");
-            closeButton.addActionListener(e -> new BG_Plugin().run(null ));
-            dialog.add(closeButton);
-
-            dialog.pack();
-            dialog.setVisible(true);
-        }).start();
+        new Thread(() -> KeyboardFocusManager.getCurrentKeyboardFocusManager()
+				.addKeyEventDispatcher(e -> {
+					if (e.getID() == KeyEvent.KEY_PRESSED) {
+						switch (e.getKeyCode()) {
+							case KeyEvent.VK_F1:
+								new BG_Plugin().run(null);
+								break;
+							case KeyEvent.VK_F2:
+								System.out.println("F2 key pressed (not assigned)");
+								break;
+						}
+					}
+					return false;
+				})).start();
 	}
 
 	public static void main(final String[] args) {
@@ -144,9 +146,9 @@ public class BG_Plugin implements PlugIn {
 		params.parse(args);
 
 		new ImageJ();
-		SwingUtilities.invokeLater(BG_Plugin::showNonBlockingDialog);
+		SwingUtilities.invokeLater(BG_Plugin::addKeyListener);
 
-		img = N5Utils.open(new N5FSReader(params.n5Path), params.dataset);
+		RandomAccessibleInterval<UnsignedByteType> img = N5Utils.open(new N5FSReader(params.n5Path), params.dataset);
 		if (img.numDimensions() > 2) {
 			img = Views.hyperSlice(img, 2, params.z);
 		}
