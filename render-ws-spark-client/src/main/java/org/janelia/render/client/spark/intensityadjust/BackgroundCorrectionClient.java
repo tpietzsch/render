@@ -49,7 +49,7 @@ import java.util.Map;
  * respectively). Coefficients can be found interactively using {@link org.janelia.render.client.embackground.BG_Plugin}.
  * </p>
  * In particular, the parameter file should have the following format. There is one root array, whose elements have
- * the properties: "fromZ", "modelType", and "coefficients"s, e.g.:
+ * exactly keys: "fromZ", "modelType", and "coefficients"s, e.g.:
  * <pre>
  * [ {
  *     "fromZ": 1,
