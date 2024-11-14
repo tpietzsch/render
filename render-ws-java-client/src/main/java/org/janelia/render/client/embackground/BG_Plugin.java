@@ -10,6 +10,7 @@ import javax.swing.SwingUtilities;
 import com.beust.jcommander.Parameter;
 import mpicbg.models.IllDefinedDataPointsException;
 import mpicbg.models.NotEnoughDataPointsException;
+import net.imglib2.algorithm.gauss3.Gauss3;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.type.numeric.real.FloatType;
 import org.janelia.render.client.parameter.CommandLineParameters;
@@ -40,9 +41,12 @@ public class BG_Plugin implements PlugIn {
 		public String dataset;
 
 		@Parameter(names = "--z",
-				description = "Z slice to process",
-				required = true)
-		public int z;
+				description = "Z slice to process")
+		public int z = 1;
+
+		@Parameter(names = "--downscaleFactor",
+				description = "Downscale factor")
+		public int downscale = 0;
 	}
 
 
@@ -148,12 +152,32 @@ public class BG_Plugin implements PlugIn {
 		new ImageJ();
 		SwingUtilities.invokeLater(BG_Plugin::addKeyListener);
 
+		IJ.log("Opening " + params.dataset + " from " + params.n5Path);
 		RandomAccessibleInterval<UnsignedByteType> img = N5Utils.open(new N5FSReader(params.n5Path), params.dataset);
 		if (img.numDimensions() > 2) {
+			IJ.log("Showing slice " + params.z);
 			img = Views.hyperSlice(img, 2, params.z);
 		}
-		ImageJFunctions.show(img);
+		final RandomAccessibleInterval<UnsignedByteType> downscaled = downSample(img, params.downscale);
+		ImageJFunctions.show(downscaled, "Original");
+	}
 
-		new RoiManager();
+	private static RandomAccessibleInterval<UnsignedByteType> downSample(final RandomAccessibleInterval<UnsignedByteType> img, int downscale) {
+		if (downscale < 1) {
+			// automatically determine downscale factor
+			IJ.log("No downscaling factor given, choosing factor automatically...");
+			final long[] dims = img.dimensionsAsLongArray();
+			final long maxSize = 2000 * 2000;
+			downscale = (int) Math.ceil(Math.sqrt((double) (dims[0] * dims[1]) / maxSize));
+		}
+
+		if (downscale == 1) {
+			IJ.log("No downscaling, showing original image at full size.");
+			return img;
+		} else {
+			IJ.log("Isotropically downscaling by factor of " + downscale);
+			Gauss3.gauss(downscale / 2.0, Views.extendMirrorSingle(img), img);
+			return Views.subsample(img, downscale);
+		}
 	}
 }
