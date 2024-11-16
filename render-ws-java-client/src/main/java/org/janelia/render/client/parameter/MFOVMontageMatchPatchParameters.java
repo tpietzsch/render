@@ -199,7 +199,7 @@ public class MFOVMontageMatchPatchParameters
             qTileIdPrefixForRun = getTileIdPrefixForRun(qTileId);
             pTileIdPrefixForRun = multiFieldOfViewId;
         } else if ((multiFieldOfViewId == null) || (multiFieldOfViewId.length() != 10)) {
-            throw new IllegalArgumentException("--mfov should be a 10 character value (e.g. 001_000006)");
+            throw new IllegalArgumentException("--mfov should be a 10 character value (e.g. 0399_m0013)");
         } else {
             pTileIdPrefixForRun = multiFieldOfViewId;
             qTileIdPrefixForRun = multiFieldOfViewId;
