@@ -81,8 +81,8 @@ public class CorrectBackground {
 		final RandomAccess<T> ra = slice.randomAccess();
 
 		for (final java.awt.Point point : extractInterestPoints(rois)) {
-			final double x = (point.x - scaleX) / scaleX;
-			final double y = (point.y - scaleY) / scaleY;
+			final double x = BackgroundModel.scaleCoordinate(point.x, scaleX);
+			final double y = BackgroundModel.scaleCoordinate(point.x, scaleX);
 			final double z = ra.setPositionAndGet(point.x, point.y).getRealDouble();
 			matches.add(new PointMatch(new Point(new double[]{x, y}), new Point(new double[]{z})));
 		}
@@ -109,8 +109,8 @@ public class CorrectBackground {
 
 		final double[] location = new double[2];
 		final RealRandomAccessible<FloatType> background = new FunctionRealRandomAccessible<>(2, (pos, value) -> {
-			location[0] = (pos.getDoublePosition(0) - scaleX) / scaleX;
-			location[1] = (pos.getDoublePosition(1) - scaleY) / scaleY;
+			location[0] = BackgroundModel.scaleCoordinate(pos.getDoublePosition(0), scaleX);
+			location[1] = BackgroundModel.scaleCoordinate(pos.getDoublePosition(1), scaleY);
 			backgroundModel.applyInPlace(location);
 			value.setReal(location[0]);
 		}, FloatType::new);

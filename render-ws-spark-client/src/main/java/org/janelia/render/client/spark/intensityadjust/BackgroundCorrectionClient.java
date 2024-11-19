@@ -212,8 +212,8 @@ public class BackgroundCorrectionClient implements Serializable {
                         continue;
                     }
 
-                    location[0] = (imgCursor.getDoublePosition(0) - xScale) / xScale;
-                    location[1] = (imgCursor.getDoublePosition(1) - yScale) / yScale;
+                    location[0] = BackgroundModel.scaleCoordinate(imgCursor.getDoublePosition(0), xScale);
+                    location[1] = BackgroundModel.scaleCoordinate(imgCursor.getDoublePosition(1), yScale);
 
                     model.applyInPlace(location);
                     pixel.setReal(UnsignedByteType.getCodedSignedByteChecked((int) (pixel.getRealDouble() - location[0])));
