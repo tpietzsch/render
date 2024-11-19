@@ -76,6 +76,11 @@ public class BackgroundCorrectionClient implements Serializable {
                 required = true)
         public String datasetIn;
 
+        @Parameter(names = "--mask",
+                description = "Name of the mask dataset for the input",
+                required = true)
+        public String mask;
+
         @Parameter(names = "--n5Out",
                 description = "Path to the output N5 container",
                 required = true)
@@ -137,6 +142,10 @@ public class BackgroundCorrectionClient implements Serializable {
             inputAttributes = in.getDatasetAttributes(parameters.datasetIn);
             final Map<String, Class<?>> otherAttributes = in.listAttributes(parameters.datasetIn);
 
+            if (!in.exists(parameters.mask)) {
+                throw new IllegalArgumentException("Mask dataset does not exist: " + parameters.mask);
+            }
+
             try (final N5Writer out = new N5FSWriter(parameters.n5Out)) {
                 if (out.exists(parameters.datasetOut)) {
                     throw new IllegalArgumentException("Output dataset already exists: " + parameters.datasetOut);
@@ -172,6 +181,8 @@ public class BackgroundCorrectionClient implements Serializable {
             // load block
             final Img<UnsignedByteType> img = N5Utils.open(in, parameters.datasetIn);
             final RandomAccessibleInterval<UnsignedByteType> croppedImg = Views.interval(img, block);
+            final Img<UnsignedByteType> mask = N5Utils.open(in, parameters.mask);
+            final RandomAccessibleInterval<UnsignedByteType> croppedMask = Views.interval(mask, block);
             final long[] dimensions = in.getDatasetAttributes(parameters.datasetIn).getDimensions();
 
             // scale pixel coordinates to [-1, 1] x [-1, 1]
@@ -186,20 +197,23 @@ public class BackgroundCorrectionClient implements Serializable {
                     continue;
                 }
 
-                final RandomAccessibleInterval<UnsignedByteType> slice = Views.hyperSlice(croppedImg, 2, z - (int) block.min(2));
-                final Cursor<UnsignedByteType> cursor = Views.iterable(slice).localizingCursor();
+                final RandomAccessibleInterval<UnsignedByteType> imgSlice = Views.hyperSlice(croppedImg, 2, z - (int) block.min(2));
+                final RandomAccessibleInterval<UnsignedByteType> maskSlice = Views.hyperSlice(croppedMask, 2, z - (int) block.min(2));
+                final Cursor<UnsignedByteType> imgCursor = Views.iterable(imgSlice).localizingCursor();
+                final Cursor<UnsignedByteType> maskCursor = Views.iterable(maskSlice).localizingCursor();
                 final double[] location = new double[2];
 
                 // apply model to slice
-                while (cursor.hasNext()) {
-                    final UnsignedByteType pixel = cursor.next();
-                    if (pixel.getInteger() == 0) {
-                        // background should not be corrected
+                while (imgCursor.hasNext()) {
+                    final UnsignedByteType pixel = imgCursor.next();
+                    final UnsignedByteType maskPixel = maskCursor.next();
+                    if (maskPixel.get() == 0) {
+                        // don't apply model to background
                         continue;
                     }
 
-                    location[0] = (cursor.getDoublePosition(0) - xScale) / xScale;
-                    location[1] = (cursor.getDoublePosition(1) - yScale) / yScale;
+                    location[0] = (imgCursor.getDoublePosition(0) - xScale) / xScale;
+                    location[1] = (imgCursor.getDoublePosition(1) - yScale) / yScale;
 
                     model.applyInPlace(location);
                     pixel.setReal(UnsignedByteType.getCodedSignedByteChecked((int) (pixel.getRealDouble() - location[0])));
