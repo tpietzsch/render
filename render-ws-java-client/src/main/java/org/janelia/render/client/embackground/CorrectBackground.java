@@ -82,7 +82,7 @@ public class CorrectBackground {
 
 		for (final java.awt.Point point : extractInterestPoints(rois)) {
 			final double x = BackgroundModel.scaleCoordinate(point.x, scaleX);
-			final double y = BackgroundModel.scaleCoordinate(point.x, scaleX);
+			final double y = BackgroundModel.scaleCoordinate(point.y, scaleY);
 			final double z = ra.setPositionAndGet(point.x, point.y).getRealDouble();
 			matches.add(new PointMatch(new Point(new double[]{x, y}), new Point(new double[]{z})));
 		}

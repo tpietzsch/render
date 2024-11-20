@@ -63,12 +63,12 @@ public abstract class BackgroundModel<T extends BackgroundModel<T>> extends Abst
 
 	/**
 	 * Scale the given coordinate to the model coordinates (in [-1, 1]).
-	 * @param x the coordinate to scale
+	 * @param coordinate the coordinate to scale
 	 * @param scale the scale factor (usually half the image size in the respective dimension)
 	 * @return the scaled coordinate in the range [-1, 1]
 	 */
-	public static double scaleCoordinate(final double x, final double scale) {
-		return (x - scale) / scale;
+	public static double scaleCoordinate(final double coordinate, final double scale) {
+		return (coordinate - scale) / scale;
 	}
 
 	@Override
