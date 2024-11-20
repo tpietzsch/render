@@ -72,12 +72,12 @@ public class BackgroundCorrectionClient implements Serializable {
         public String n5In;
 
         @Parameter(names = "--datasetIn",
-                description = "Name of the input dataset",
+                description = "Name of the input dataset (or group in case of multiscale pyramid; only s0 is processed)",
                 required = true)
         public String datasetIn;
 
         @Parameter(names = "--mask",
-                description = "Name of the mask dataset for the input",
+                description = "Name of the mask dataset for the input (or group in case of multiscale pyramid; only s0 is processed)",
                 required = true)
         public String mask;
 
@@ -87,7 +87,7 @@ public class BackgroundCorrectionClient implements Serializable {
         public String n5Out;
 
         @Parameter(names = "--datasetOut",
-                description = "Name of the output dataset",
+                description = "Name of the output dataset (or group in case of multiscale pyramid; only s0 is processed)",
                 required = true)
         public String datasetOut;
 
@@ -137,13 +137,11 @@ public class BackgroundCorrectionClient implements Serializable {
         final BackgroundModelProvider modelProvider = BackgroundModelProvider.fromJsonFile(parameters.parameterFile);
 
         // set up input and output N5 datasets
-        final DatasetAttributes inputAttributes;
+        final int[] blockSize;
+        final long[] dimensions;
         try (final N5Reader in = new N5FSReader(parameters.n5In)) {
-            inputAttributes = in.getDatasetAttributes(parameters.datasetIn);
-            final Map<String, Class<?>> otherAttributes = in.listAttributes(parameters.datasetIn);
-
-            if (!in.exists(parameters.mask)) {
-                throw new IllegalArgumentException("Mask dataset does not exist: " + parameters.mask);
+            if (!in.exists(parameters.datasetIn) || !in.exists(parameters.mask)) {
+                throw new IllegalArgumentException("Mask dataset (" + parameters.mask + ") or input dataset (" + parameters.datasetIn + ") do not exist");
             }
 
             try (final N5Writer out = new N5FSWriter(parameters.n5Out)) {
@@ -151,12 +149,26 @@ public class BackgroundCorrectionClient implements Serializable {
                     throw new IllegalArgumentException("Output dataset already exists: " + parameters.datasetOut);
                 }
 
-                out.createDataset(parameters.datasetOut, inputAttributes);
+                // create output dataset (or group if input is multiscale)
+                final boolean isMultiScale = in.exists(parameters.datasetIn + "/s0");
+                cloneDatasetOrGroupAttributes(in, out, parameters, isMultiScale);
                 out.setAttribute(parameters.datasetOut, "BackgroundCorrectionClientParameters", parameters);
-                otherAttributes.forEach((key, clazz) -> {
-                    final Object attribute = in.getAttribute(parameters.datasetIn, key, clazz);
-                    out.setAttribute(parameters.datasetOut, key, attribute);
-                });
+
+                if (isMultiScale) {
+                    // since we only write s0, we need to set the scales attribute accordingly
+                    out.setAttribute(parameters.datasetOut, "scales", new int[][]{{1, 1, 1}});
+
+                    // also set up the output dataset for s0
+                    parameters.datasetIn = parameters.datasetIn + "/s0";
+                    parameters.mask = parameters.mask + "/s0";
+                    parameters.datasetOut = parameters.datasetOut + "/s0";
+                    cloneDatasetOrGroupAttributes(in, out, parameters, false);
+                }
+
+                // read block size and dimensions (parameters now refer to the actual dataset to be processed)
+                final DatasetAttributes inputAttributes = in.getDatasetAttributes(parameters.datasetIn);
+                blockSize = inputAttributes.getBlockSize();
+                dimensions = inputAttributes.getDimensions();
             }
         }
 
@@ -164,12 +176,27 @@ public class BackgroundCorrectionClient implements Serializable {
         final Broadcast<BackgroundModelProvider> modelProviderBroadcast = sparkContext.broadcast(modelProvider);
         final Broadcast<Parameters> parametersBroadcast = sparkContext.broadcast(parameters);
 
-        final List<Grid.Block> blocks = Grid.create(inputAttributes.getDimensions(), inputAttributes.getBlockSize());
+        final List<Grid.Block> blocks = Grid.create(dimensions, blockSize);
         final JavaRDD<Grid.Block> blockRDD = sparkContext.parallelize(blocks, blocks.size());
 
         blockRDD.foreach(block -> processSingleBlock(parametersBroadcast.value(), modelProviderBroadcast.value(), block));
 
         LOG.info("runWithContext: exit");
+    }
+
+    private static void cloneDatasetOrGroupAttributes(final N5Reader in, final N5Writer out, final Parameters parameters, final boolean isGroup) {
+        if (isGroup) {
+            out.createGroup(parameters.datasetOut);
+        } else {
+            final DatasetAttributes datasetAttributes = in.getDatasetAttributes(parameters.datasetIn);
+            out.createDataset(parameters.datasetOut, datasetAttributes);
+        }
+
+        final Map<String, Class<?>> attributes = in.listAttributes(parameters.datasetIn);
+        attributes.forEach((key, clazz) -> {
+            final Object attribute = in.getAttribute(parameters.datasetIn, key, clazz);
+            out.setAttribute(parameters.datasetOut, key, attribute);
+        });
     }
 
     private static void processSingleBlock(final Parameters parameters, final BackgroundModelProvider modelProvider, final Grid.Block block) {
