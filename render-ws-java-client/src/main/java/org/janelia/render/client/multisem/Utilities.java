@@ -36,33 +36,40 @@ import mpicbg.models.PointMatch;
 public class Utilities {
 
     /**
-     * @return 001_000006 for 001_000006_019_20220407_115555.1247.0
+     * @return 0399_m0013 for w60_magc0399_scan005_m0013_s001
      */
     public static String getMFOVForTileId(final String tileId) throws IllegalArgumentException {
-        if (tileId.length() < 10) {
+        final int magcIndex = tileId.indexOf("magc");
+        if ((magcIndex < 0) || (tileId.length() < (magcIndex + 18))) {
             throw new IllegalArgumentException("MFOV identifier cannot be derived from tileId " + tileId);
         }
-        return tileId.substring(0, 10);
+        final String magcName = tileId.substring((magcIndex + 4), (magcIndex + 8)); // 0399
+        final String mfovName = tileId.substring((magcIndex + 16), (magcIndex + 22)); // _m0013
+        return magcName + mfovName;
     }
 
     /**
-     * @return 001_000006_019 for 001_000006_019_20220407_115555.1247.0
+     * @return 0399_m0013_s001 for w60_magc0399_scan005_m0013_s001
      */
     public static String getSFOVForTileId(final String tileId) throws IllegalArgumentException {
-        if (tileId.length() < 14) {
+        final int magcIndex = tileId.indexOf("magc");
+        if ((magcIndex < 0) || (tileId.length() < (magcIndex + 27))) {
             throw new IllegalArgumentException("SFOV identifier cannot be derived from tileId " + tileId);
         }
-        return tileId.substring(0, 14);
+        final String magcName = tileId.substring((magcIndex + 4), (magcIndex + 8)); // 0399
+        final String mfovSfovName = tileId.substring((magcIndex + 16), (magcIndex + 27)); // _m0013_s001
+        return magcName + mfovSfovName;
     }
 
     /**
-     * @return 019 for 001_000006_019_20220407_115555.1247.0
+     * @return 001 for w60_magc0399_scan005_m0013_s001
      */
     public static String getSFOVIndexForTileId(final String tileId) throws IllegalArgumentException {
-        if (tileId.length() < 14) {
+        final int scanIndex = tileId.indexOf("scan");
+        if ((scanIndex < 0) || (tileId.length() < (scanIndex + 18))) {
             throw new IllegalArgumentException("SFOV index cannot be derived from tileId " + tileId);
         }
-        return tileId.substring(11, 14);
+        return tileId.substring(scanIndex + 15);
     }
 
     /**

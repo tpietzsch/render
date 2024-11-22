@@ -184,9 +184,9 @@
       }
     ],
 
-    "jrc_mpi_psc120_1b-destreak" : [
+    "jrc_mpi_psc120_1b-destreak-16bit" : [
       {
-        "className" : "org.janelia.alignment.destreak.LocalSmoothMaskStreakCorrector",
+        "className" : "org.janelia.alignment.destreak.LocalSmoothMaskStreakCorrector16Bit",
         "parameters" : {
           "dataString" : "6553,10920,40,8,0.0,5,15.0,0.05"
         }
@@ -202,18 +202,18 @@
       }
     ],
 
-    "jrc_mpi_psc120_1a1-destreak" : [
+    "jrc_mpi_psc120_1a1-destreak-16bit" : [
       {
-        "className" : "org.janelia.alignment.destreak.LocalSmoothMaskStreakCorrector",
+        "className" : "org.janelia.alignment.destreak.LocalSmoothMaskStreakCorrector16Bit",
         "parameters" : {
           "dataString" : "5545,10920,24,8,0.0,5,15.0,0.05"
         }
       }
     ],
 
-    "jrc_mpi_psc120_1a2-destreak" : [
+    "jrc_mpi_psc120_1a2-destreak-16bit" : [
       {
-        "className" : "org.janelia.alignment.destreak.LocalSmoothMaskStreakCorrector",
+        "className" : "org.janelia.alignment.destreak.LocalSmoothMaskStreakCorrector16Bit",
         "parameters" : {
           "dataString" : "5545,10920,24,8,0.0,5,15.0,0.05"
         }

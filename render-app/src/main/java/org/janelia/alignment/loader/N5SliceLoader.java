@@ -10,6 +10,8 @@ import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.Charset;
 
+import net.imglib2.loops.LoopBuilder;
+import net.imglib2.type.numeric.integer.UnsignedShortType;
 import org.janelia.saalfeldlab.n5.DataType;
 import org.janelia.saalfeldlab.n5.DatasetAttributes;
 import org.janelia.saalfeldlab.n5.N5FSReader;
@@ -170,6 +172,15 @@ public class N5SliceLoader implements ImageLoader {
 
         public abstract RandomAccessibleInterval<A> setupTarget(B forImageProcessor);
 
+        /**
+         * Hook to convert pixel values if necessary. Default is to return the pixel as is.
+         * @param pixel the pixel to convert
+         * @return the converted pixel (might be the same instance as the input)
+         */
+        protected A convert(final A pixel) {
+            return pixel;
+        }
+
         public ImageProcessor load(final N5Reader reader,
                                    final String dataSet,
                                    final int width,
@@ -186,15 +197,8 @@ public class N5SliceLoader implements ImageLoader {
             if (xAndYOffsets != null) {
                 slice = Views.offsetInterval(slice, xAndYOffsets, new long[] {0,1});
             }
-            final IntervalView<Pair<A, A>> pairView =  Views.interval(Views.pair(slice, target),
-                                                                      target);
-            final IterableInterval<Pair<A, A>> pairs = Views.flatIterable(pairView);
 
-            pairs.forEach(pair -> {
-                final A fromPixel = pair.getA();
-                final A toPixel = pair.getB();
-                toPixel.set(fromPixel);
-            });
+            LoopBuilder.setImages(slice, target).forEachPixel((s, t) -> t.set(convert(s)));
 
             return imageProcessor;
         }
@@ -231,6 +235,13 @@ public class N5SliceLoader implements ImageLoader {
                             (short[]) forImageProcessor.getPixels(),
                             forImageProcessor.getWidth(),
                             forImageProcessor.getHeight());
+                }
+
+                @Override
+                // Since all 16bit HDF5 slices we open are converted .dat files, we need to properly convert the pixel values
+                protected ShortType convert(final ShortType pixel) {
+                    pixel.set(UnsignedShortType.getCodedSignedShortChecked(32768 - pixel.get()));
+                    return pixel;
                 }
             };
 

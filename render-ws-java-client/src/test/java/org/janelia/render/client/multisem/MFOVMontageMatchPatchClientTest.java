@@ -18,18 +18,18 @@ public class MFOVMontageMatchPatchClientTest {
     public static void main(final String[] args) {
 
         final String[] effectiveArgs = (args != null) && (args.length > 0) ? args : new String[] {
-                "--baseDataUrl", "http://renderer-dev.int.janelia.org:8080/render-ws/v1",
-                "--owner", "hess_wafer_53",
-                "--project", "cut_000_to_009",
-                "--stack", "c001_s145_v01",
+                "--baseDataUrl", "http://10.40.3.113:8080/render-ws/v1",
+                "--owner", "trautmane",
+                "--project", "w60_serial_290_to_299",
+                "--stack", "w60_s296_r00_d00",
                 "--xyNeighborFactor", "0.6", // for tiles completely within mFov
                 "--sameLayerDerivedMatchWeight", "0.15",
                 "--crossLayerDerivedMatchWeight", "0.1",
 //                "--pTileId", "145_000010_001_20220618_040953.80.0",
 //                "--qTileId", "145_000010_002_20220618_040953.80.0",
 
-                "--matchCollection", "c001_s145_v01_match",
-                "--matchStorageCollection", "c001_s145_v01_match_try3",
+                "--matchCollection", "w60_s296_r00_d00_match",
+                "--matchStorageCollection", "w60_s296_r00_d00_match_test",
 
 
         //"--mfov", "001_000003",

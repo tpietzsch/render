@@ -14,9 +14,9 @@ import org.janelia.alignment.match.OrderedCanvasIdPair;
  *
  *     identifies tile pairs:
  *       ...
- *       groupId "1247.0", p "001_000006_019_20220407_115555.1247.0" and q "001_000006_037_20220407_115555.1247.0"
- *       groupId "1248.0", p "001_000006_019_20220407_172027.1248.0" and q "001_000006_037_20220407_172027.1248.0"
- *       groupId "1249.0", p "001_000006_019_20220407_224819.1249.0" and q "001_000006_037_20220407_224819.1249.0"
+ *       groupId "1.0", p "w60_magc0399_scan004_m0013_s001" and q "w60_magc0399_scan004_m0013_s002"
+ *       groupId "2.0", p "w60_magc0399_scan005_m0013_s001" and q "w60_magc0399_scan005_m0013_s002"
+ *       groupId "3.0", p "w60_magc0399_scan006_m0013_s001" and q "w60_magc0399_scan006_m0013_s002"
  *       ...
  * </pre>
  *
@@ -33,13 +33,13 @@ public class MFOVPositionPair extends OrderedCanvasIdPair {
 
     /**
      * Converts canvasId based upon section and tile to multi-field-of-view position id based upon slab and mfov_sfov
-     * (e.g. "1247.0", "001_000006_019_20220407_115555.1247.0" to "001", "000006_019").
+     * (e.g. "2.0", "w60_magc0399_scan005_m0013_s001" to "magc0399", "m0013_s001").
      *
      * @return multi-field-of-view position id derived from specified canvasId.
      */
     public static CanvasId toPositionCanvasId(final CanvasId canvasId) {
-        return new CanvasId(canvasId.getId().substring(0, 3),   // slab id
-                            canvasId.getId().substring(5, 14)); // <mfov>_<sfov>
+        return new CanvasId(canvasId.getId().substring(4, 12),  // slab id: magc0399
+                            canvasId.getId().substring(21));  // <mfov>_<sfov>: m0013_s001
     }
 
 }

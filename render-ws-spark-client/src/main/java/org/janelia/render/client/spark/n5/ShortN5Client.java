@@ -206,8 +206,7 @@ public class ShortN5Client
                         .flatIterable(
                                 Views.interval(
                                         ArrayImgs.unsignedShorts(
-                                        		(short[])convert16bit( currentProcessor ).getPixels(),
-                                                //(short[]) currentProcessor.getPixels(),
+                                                (short[]) currentProcessor.getPixels(),
                                                 currentProcessor.getWidth(),
                                                 currentProcessor.getHeight()),
                                         outSlice));
@@ -222,17 +221,5 @@ public class ShortN5Client
             final N5Writer anotherN5Writer = new N5FSWriter(n5Path); // needed to prevent Spark serialization error
             N5Utils.saveNonEmptyBlock(block, anotherN5Writer, datasetName, gridBlock.gridPosition, new UnsignedShortType(0));
         });
-    }
-
-    public static ShortProcessor convert16bit( final ShortProcessor currentProcessor )
-    {
-    	final short[] array = (short[])currentProcessor.getPixels();
-
-        for (int i = 0; i < array.length; ++i) {
-            final short value = array[i];
-            array[i] = (value == 0) ? 0 : UnsignedShortType.getCodedSignedShort(32768 - array[i]);
-        }
-
-    	return currentProcessor;
     }
 }

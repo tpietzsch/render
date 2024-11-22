@@ -69,13 +69,13 @@ public class Create16BitH5StackClientTest {
 
         final String[] effectiveArgs = new String[] {
                 "--baseDataUrl", "http://em-services-1.int.janelia.org:8080/render-ws/v1",
-                "--owner", "fibsem",
-                "--project", "jrc_celegans_20240819",
-                "--alignStack", "v3_acquire_align",
-                "--rawStack", "v3_acquire_align_16bit",
-                "--rawRootDirectory", "/nrs/fibsem/data/jrc_celegans_20240819/raw",
+                "--owner", "cellmap",
+                "--project", "jrc_mus_cortex_1",
+                "--alignStack", "v1_acquire_align",
+                "--rawStack", "v1_acquire_align_16bit",
+                "--rawRootDirectory", "/nrs/cellmap/data/jrc_mus-cortex-1/raw",
                 "--completeRawStack"
-//                "--z", "5000", "9740", "9741", "9742", "9743", "9744", "9745", "9746", "9747", "9748", "9749", "9750"
+//                "--z", "5000", "9740"
         };
 
         Create16BitH5StackClient.main(effectiveArgs);
