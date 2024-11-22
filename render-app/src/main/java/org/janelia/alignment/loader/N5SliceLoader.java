@@ -172,6 +172,11 @@ public class N5SliceLoader implements ImageLoader {
 
         public abstract RandomAccessibleInterval<A> setupTarget(B forImageProcessor);
 
+        /**
+         * Hook to convert pixel values if necessary. Default is to return the pixel as is.
+         * @param pixel the pixel to convert
+         * @return the converted pixel (might be the same instance as the input)
+         */
         protected A convert(final A pixel) {
             return pixel;
         }
