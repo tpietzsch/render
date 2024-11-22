@@ -8,6 +8,7 @@ import net.imglib2.Cursor;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.Img;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
+import net.imglib2.type.numeric.integer.UnsignedShortType;
 import net.imglib2.view.Views;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
@@ -40,8 +41,8 @@ import java.util.Map;
 
 /**
  * Spark client for background correction by a layer-wise quadratic or fourth order model.
- * The client takes as input an N5 container with a 3D dataset and a parameter file, and writes the corrected data to a
- * new dataset in a given container.
+ * The client takes as input an N5 container with a 3D 16bit dataset and a parameter file, and writes the corrected data
+ * to a new dataset in a given container.
  * </p>
  * The parameter file is a json file containing a list of z values and corresponding models. The model for each z value
  * is valid for all z layers starting at the given z value until the next z value in the list.
@@ -206,8 +207,8 @@ public class BackgroundCorrectionClient implements Serializable {
              final N5Writer out = new N5FSWriter(parameters.n5Out)) {
 
             // load block
-            final Img<UnsignedByteType> img = N5Utils.open(in, parameters.datasetIn);
-            final RandomAccessibleInterval<UnsignedByteType> croppedImg = Views.interval(img, block);
+            final Img<UnsignedShortType> img = N5Utils.open(in, parameters.datasetIn);
+            final RandomAccessibleInterval<UnsignedShortType> croppedImg = Views.interval(img, block);
             final Img<UnsignedByteType> mask = N5Utils.open(in, parameters.mask);
             final RandomAccessibleInterval<UnsignedByteType> croppedMask = Views.interval(mask, block);
             final long[] dimensions = in.getDatasetAttributes(parameters.datasetIn).getDimensions();
@@ -224,15 +225,15 @@ public class BackgroundCorrectionClient implements Serializable {
                     continue;
                 }
 
-                final RandomAccessibleInterval<UnsignedByteType> imgSlice = Views.hyperSlice(croppedImg, 2, z - (int) block.min(2));
+                final RandomAccessibleInterval<UnsignedShortType> imgSlice = Views.hyperSlice(croppedImg, 2, z - (int) block.min(2));
                 final RandomAccessibleInterval<UnsignedByteType> maskSlice = Views.hyperSlice(croppedMask, 2, z - (int) block.min(2));
-                final Cursor<UnsignedByteType> imgCursor = Views.iterable(imgSlice).localizingCursor();
+                final Cursor<UnsignedShortType> imgCursor = Views.iterable(imgSlice).localizingCursor();
                 final Cursor<UnsignedByteType> maskCursor = Views.iterable(maskSlice).localizingCursor();
                 final double[] location = new double[2];
 
                 // apply model to slice
                 while (imgCursor.hasNext()) {
-                    final UnsignedByteType pixel = imgCursor.next();
+                    final UnsignedShortType pixel = imgCursor.next();
                     final UnsignedByteType maskPixel = maskCursor.next();
                     if (maskPixel.get() == 0) {
                         // don't apply model to background
@@ -243,12 +244,12 @@ public class BackgroundCorrectionClient implements Serializable {
                     location[1] = BackgroundModel.scaleCoordinate(imgCursor.getDoublePosition(1), yScale);
 
                     model.applyInPlace(location);
-                    pixel.setReal(UnsignedByteType.getCodedSignedByteChecked((int) (pixel.getRealDouble() - location[0])));
+                    pixel.setReal(UnsignedShortType.getCodedSignedShortChecked((int) (pixel.getRealDouble() - location[0])));
                 }
             }
 
             // save block
-            N5Utils.saveNonEmptyBlock(croppedImg, out, parameters.datasetOut, block.gridPosition, new UnsignedByteType());
+            N5Utils.saveNonEmptyBlock(croppedImg, out, parameters.datasetOut, block.gridPosition, new UnsignedShortType());
         }
     }
 
