@@ -70,10 +70,10 @@ public class Create16BitH5StackClientTest {
         final String[] effectiveArgs = new String[] {
                 "--baseDataUrl", "http://em-services-1.int.janelia.org:8080/render-ws/v1",
                 "--owner", "fibsem",
-                "--project", "jrc_mpi_psc120_1a1",
+                "--project", "jrc_mpi_psc120_1a2",
                 "--alignStack", "v2_acquire_align",
                 "--rawStack", "v2_acquire_align_16bit",
-                "--rawRootDirectory", "/nrs/fibsem/data/jrc_mpi_psc120_1a1/raw",
+                "--rawRootDirectory", "/nrs/fibsem/data/jrc_mpi_psc120_1a2/raw",
                 "--completeRawStack"
 //                "--z", "5000", "9740"
         };
