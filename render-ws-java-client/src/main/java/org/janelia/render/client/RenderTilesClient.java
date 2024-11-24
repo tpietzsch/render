@@ -405,18 +405,18 @@ public class RenderTilesClient {
 
         final File tileFile = getTileFile(tileSpec);
         final BufferedImage bufferedImage;
-        if (clientParameters.excludeMask) {
-            // skip conversion step if we don't need to worry about mask
-            bufferedImage = imageProcessorWithMasks.ip.getBufferedImage();
+        if ((clientParameters.renderType == RenderType.ARGB) || (! clientParameters.excludeMask)) {
+            // this incorporates the mask if it exists into the rendered image
+            bufferedImage = ArgbRenderer.CONVERTER.convertProcessorWithMasksToImage(renderParameters,
+                                                                                    imageProcessorWithMasks);
         } else if (clientParameters.renderType == RenderType.EIGHT_BIT) {
+            // this only converts the image processor and ignores the mask
             bufferedImage = ByteRenderer.CONVERTER.convertProcessorWithMasksToImage(renderParameters,
                                                                                     imageProcessorWithMasks);
         } else if (clientParameters.renderType == RenderType.SIXTEEN_BIT) {
+            // this only converts the image processor and ignores the mask
             bufferedImage = ShortRenderer.CONVERTER.convertProcessorWithMasksToImage(renderParameters,
                                                                                      imageProcessorWithMasks);
-        } else if (clientParameters.renderType == RenderType.ARGB) {
-            bufferedImage = ArgbRenderer.CONVERTER.convertProcessorWithMasksToImage(renderParameters,
-                                                                                    imageProcessorWithMasks);
         } else {
             throw new IllegalArgumentException("unsupported render type: " + clientParameters.renderType);
         }
