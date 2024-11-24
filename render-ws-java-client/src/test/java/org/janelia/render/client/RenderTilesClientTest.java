@@ -24,24 +24,25 @@ public class RenderTilesClientTest {
             final String[] testArgs = {
                     "--baseDataUrl", "http://em-services-1.int.janelia.org:8080/render-ws/v1",
                     "--owner", "fibsem",
-                    "--project", "jrc_celegans_20240819",
-                    "--stack", "v3_acquire_align_16bit",
-                    "--rootDirectory", " /nrs/fibsem/data/jrc_celegans_20240819/tiles_destreak",
-                    "--runTimestamp", "20241031_150000",
+                    "--project", "jrc_mpi_psc120_1a1",
+                    "--stack", "v2_acquire_align_16bit",
+                    "--rootDirectory", "/Users/trautmane/Desktop/tiles_destreak",
+                    "--runTimestamp", "20241123_160000",
                     "--scale", "1.0",
                     "--format", "png",
                     "--excludeMask",
                     "--excludeAllTransforms",
-                    "--filterListName", "jrc_celegans_20240819-destreak-16bit",
-                    "--hackStack", "v3_acquire_align_16bit_destreak_test",
+                    "--filterListName", "jrc_mpi_psc120_1a1-destreak-16bit",
+//                    "--hackStack", "v3_acquire_align_16bit_destreak_test",
                     "--renderType", "SIXTEEN_BIT",
-                    "--completeHackStack",
-                    "--z", "4444.0"
+//                    "--completeHackStack",
+                    "--z", "78.0"
             };
 
             RenderTilesClient.main(testArgs);
             
         } catch (final Throwable t) {
+            //noinspection CallToPrintStackTrace
             t.printStackTrace();
         }
     }
