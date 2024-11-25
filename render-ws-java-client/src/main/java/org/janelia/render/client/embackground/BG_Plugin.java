@@ -2,20 +2,24 @@ package org.janelia.render.client.embackground;
 
 import java.awt.*;
 import java.awt.event.KeyEvent;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
 import javax.swing.SwingUtilities;
 
 import com.beust.jcommander.Parameter;
+import ij.ImagePlus;
 import mpicbg.models.IllDefinedDataPointsException;
 import mpicbg.models.NotEnoughDataPointsException;
-import net.imglib2.algorithm.gauss3.Gauss3;
+import mpicbg.trakem2.transform.TransformMeshMappingWithMasks.ImageProcessorWithMasks;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.type.numeric.real.FloatType;
+import org.janelia.alignment.spec.Bounds;
+import org.janelia.alignment.util.ImageProcessorCache;
+import org.janelia.render.client.RenderDataClient;
 import org.janelia.render.client.parameter.CommandLineParameters;
-import org.janelia.saalfeldlab.n5.N5FSReader;
-import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
+import org.janelia.render.client.solver.visualize.RenderTools;
 
 import ij.IJ;
 import ij.ImageJ;
@@ -25,33 +29,40 @@ import ij.plugin.PlugIn;
 import ij.plugin.frame.RoiManager;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.display.imagej.ImageJFunctions;
-import net.imglib2.view.Views;
 
 public class BG_Plugin implements PlugIn {
 
-	private static class Parameters extends CommandLineParameters {
-		@Parameter(names = "--n5Path",
-				description = "Path to the N5 container",
-				required = true)
-		public String n5Path;
+	public static final int MAX_SIZE = 2000 * 2000;
 
-		@Parameter(names = "--dataset",
-				description = "Name of the dataset",
+	private static class Parameters extends CommandLineParameters {
+		@Parameter(names = "--owner",
+				description = "Name of the owner in the render database",
 				required = true)
-		public String dataset;
+		public String owner;
+
+		@Parameter(names = "--project",
+				description = "Name of the render project",
+				required = true)
+		public String project;
+
+		@Parameter(names = "--stack",
+				description = "Name of the stack in the render project",
+				required = true)
+		public String stack;
 
 		@Parameter(names = "--z",
 				description = "Z slice to process")
 		public int z = 1;
 
-		@Parameter(names = "--downscaleFactor",
-				description = "Downscale factor")
-		public int downscale = 0;
+		@Parameter(names = "--scale",
+				description = "Scale factor for downscaling")
+		public double scale = 0.0;
 	}
 
 
 	public static int defaultType = 0;
 	public static boolean defaultShowBackground = false;
+	public static String baseUrl = "http://renderer-dev.int.janelia.org:8080/render-ws/v1";
 	public static String[] fitTypes = new String[] { "Quadratic", "Fourth Order" };
 
 	@Override
@@ -145,39 +156,46 @@ public class BG_Plugin implements PlugIn {
 				})).start();
 	}
 
-	public static void main(final String[] args) {
+	public static void main(final String[] args) throws IOException {
 		final Parameters params = new Parameters();
 		params.parse(args);
 
 		new ImageJ();
 		SwingUtilities.invokeLater(BG_Plugin::addKeyListener);
 
-		IJ.log("Opening " + params.dataset + " from " + params.n5Path);
-		RandomAccessibleInterval<UnsignedByteType> img = N5Utils.open(new N5FSReader(params.n5Path), params.dataset);
-		if (img.numDimensions() > 2) {
-			IJ.log("Showing slice " + params.z);
-			img = Views.hyperSlice(img, 2, params.z);
-		}
-		final RandomAccessibleInterval<UnsignedByteType> downscaled = downSample(img, params.downscale);
-		ImageJFunctions.show(downscaled, "Original");
+		IJ.log("Opening " + params.owner + "/" + params.project + "/" + params.stack);
+		IJ.log("Showing slice " + params.z);
+
+		final ImagePlus img = renderImage(params);
+		img.show();
 	}
 
-	private static RandomAccessibleInterval<UnsignedByteType> downSample(final RandomAccessibleInterval<UnsignedByteType> img, int downscale) {
-		if (downscale < 1) {
+	private static ImagePlus renderImage(final Parameters params) throws IOException {
+		final RenderDataClient client = new RenderDataClient(baseUrl, params.owner, params.project);
+		final Bounds layerBounds = client.getLayerBounds(params.stack, (double) params.z);
+		final long x = layerBounds.getMinX().longValue();
+		final long y = layerBounds.getMinY().longValue();
+		final long w = layerBounds.getWidth();
+		final long h = layerBounds.getHeight();
+
+		if (params.scale == 0.0) {
 			// automatically determine downscale factor
-			IJ.log("No downscaling factor given, choosing factor automatically...");
-			final long[] dims = img.dimensionsAsLongArray();
-			final long maxSize = 2000 * 2000;
-			downscale = (int) Math.ceil(Math.sqrt((double) (dims[0] * dims[1]) / maxSize));
+			IJ.log("No scale given, choosing automatically...");
+			params.scale = Math.min(1, Math.sqrt((double) MAX_SIZE / (w * h)));
 		}
 
-		if (downscale == 1) {
+		if (params.scale == 1) {
 			IJ.log("No downscaling, showing original image at full size.");
-			return img;
 		} else {
-			IJ.log("Isotropically downscaling by factor of " + downscale);
-			Gauss3.gauss(downscale / 2.0, Views.extendMirrorSingle(img), img);
-			return Views.subsample(img, downscale);
+			IJ.log("Isotropically downscaling by factor of " + params.scale);
 		}
+
+		final ImageProcessorWithMasks ipwm = RenderTools.renderImage(ImageProcessorCache.DISABLED_CACHE,
+																	 baseUrl, params.owner, params.project, params.stack,
+																	 x, y, params.z, w, h,
+																	 params.scale, false);
+
+		final String title = params.project + "-" + params.stack + "(z=" + params.z + ")";
+		return new ImagePlus(title, ipwm.ip);
 	}
 }

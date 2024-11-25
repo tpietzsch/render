@@ -59,7 +59,7 @@ import java.util.Map;
  *   }, {
  *     "fromZ": 3,
  *     "modelType": "fourthOrder",
- *     "coefficients": [ 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0
+ *     "coefficients": [ 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0 ]
  *   }
  * ]
  * </pre>
