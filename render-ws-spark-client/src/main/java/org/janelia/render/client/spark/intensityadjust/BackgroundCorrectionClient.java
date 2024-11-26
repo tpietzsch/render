@@ -178,7 +178,7 @@ public class BackgroundCorrectionClient implements Serializable {
         final Broadcast<Parameters> parametersBroadcast = sparkContext.broadcast(parameters);
 
         final List<Grid.Block> blocks = Grid.create(dimensions, blockSize);
-        final JavaRDD<Grid.Block> blockRDD = sparkContext.parallelize(blocks, blocks.size());
+        final JavaRDD<Grid.Block> blockRDD = sparkContext.parallelize(blocks);
 
         blockRDD.foreach(block -> processSingleBlock(parametersBroadcast.value(), modelProviderBroadcast.value(), block));
 
@@ -201,7 +201,7 @@ public class BackgroundCorrectionClient implements Serializable {
     }
 
     private static void processSingleBlock(final Parameters parameters, final BackgroundModelProvider modelProvider, final Grid.Block block) {
-        LOG.info("processSingleBlock: block={}", block);
+        LOG.info("processSingleBlock: block={}", block.gridPosition);
 
         try (final N5Reader in = new N5FSReader(parameters.n5In);
              final N5Writer out = new N5FSWriter(parameters.n5Out)) {
