@@ -136,7 +136,7 @@ public class ShadingCorrectionClient implements Serializable {
         LOG.info("runWithContext: entry");
 
         // read parameters
-        final BackgroundModelProvider modelProvider = BackgroundModelProvider.fromJsonFile(parameters.parameterFile);
+        final ShadingModelProvider modelProvider = ShadingModelProvider.fromJsonFile(parameters.parameterFile);
 
         // set up input and output N5 datasets
         final int[] blockSize;
@@ -175,7 +175,7 @@ public class ShadingCorrectionClient implements Serializable {
         }
 
         // parallelize computation over blocks of the input/output dataset
-        final Broadcast<BackgroundModelProvider> modelProviderBroadcast = sparkContext.broadcast(modelProvider);
+        final Broadcast<ShadingModelProvider> modelProviderBroadcast = sparkContext.broadcast(modelProvider);
         final Broadcast<Parameters> parametersBroadcast = sparkContext.broadcast(parameters);
 
         final List<Grid.Block> blocks = Grid.create(dimensions, blockSize);
@@ -201,7 +201,7 @@ public class ShadingCorrectionClient implements Serializable {
         });
     }
 
-    private static void processSingleBlock(final Parameters parameters, final BackgroundModelProvider modelProvider, final Grid.Block block) {
+    private static void processSingleBlock(final Parameters parameters, final ShadingModelProvider modelProvider, final Grid.Block block) {
         LOG.info("processSingleBlock: block={}", block.gridPosition);
 
         try (final N5Reader in = new N5FSReader(parameters.n5In);
@@ -255,10 +255,10 @@ public class ShadingCorrectionClient implements Serializable {
     }
 
 
-    static class BackgroundModelProvider implements Serializable {
+    static class ShadingModelProvider implements Serializable {
         private final List<ModelSpec> sortedModelSpecs;
 
-        private BackgroundModelProvider(final List<ModelSpec> modelSpecs) {
+        private ShadingModelProvider(final List<ModelSpec> modelSpecs) {
             this.sortedModelSpecs = modelSpecs;
             this.sortedModelSpecs.sort(Collections.reverseOrder(Comparator.comparingInt(ModelSpec::getZ)));
         }
@@ -272,14 +272,14 @@ public class ShadingCorrectionClient implements Serializable {
             return null;
         }
 
-        public static BackgroundModelProvider fromJsonFile(final String fileName) throws IOException {
+        public static ShadingModelProvider fromJsonFile(final String fileName) throws IOException {
             LOG.info("Reading model specs from file: {}", fileName);
             try (final FileReader reader = new FileReader(fileName)) {
                 return fromJson(JsonParser.parseReader(reader));
             }
         }
 
-        public static BackgroundModelProvider fromJson(final JsonElement jsonData) {
+        public static ShadingModelProvider fromJson(final JsonElement jsonData) {
 
             final List<ModelSpec> modelSpecs = new ArrayList<>();
             Collections.addAll(modelSpecs, new Gson().fromJson(jsonData, ModelSpec[].class));
@@ -290,7 +290,7 @@ public class ShadingCorrectionClient implements Serializable {
                 final ShadingModel ignored = modelSpec.getModel();
             }
 
-            return new BackgroundModelProvider(modelSpecs);
+            return new ShadingModelProvider(modelSpecs);
         }
 
 

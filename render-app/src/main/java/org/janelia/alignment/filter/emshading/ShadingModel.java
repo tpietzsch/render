@@ -128,7 +128,7 @@ public abstract class ShadingModel extends AbstractModel<ShadingModel> implement
 
 	@Override
 	public String toString() {
-		final StringBuilder sb = new StringBuilder("ShadingModel{");
+		final StringBuilder sb = new StringBuilder(this.getClass().getSimpleName()).append("{");
 
 		if (coefficients[nCoefficients() - 1] < 0) {
 			sb.append("-");
