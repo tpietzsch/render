@@ -14,9 +14,9 @@ import java.util.List;
 
 
 /**
- * An abstract base model for background correction in 2D slices of EM data.
+ * An abstract base model for shading correction in 2D slices of EM data.
  */
-public abstract class BackgroundModel<T extends BackgroundModel<T>> extends AbstractModel<T> implements Serializable {
+public abstract class ShadingModel<T extends ShadingModel<T>> extends AbstractModel<T> implements Serializable {
 
 	private final double[] coefficients;
 
@@ -25,11 +25,11 @@ public abstract class BackgroundModel<T extends BackgroundModel<T>> extends Abst
 	protected abstract List<String> coefficientNames();
 
 
-	public BackgroundModel() {
+	public ShadingModel() {
 		coefficients = new double[nCoefficients()];
 	}
 
-	public BackgroundModel(final double[] coefficients) {
+	public ShadingModel(final double[] coefficients) {
 		this();
 		System.arraycopy(coefficients, 0, this.coefficients, 0, nCoefficients());
 	}
@@ -128,7 +128,7 @@ public abstract class BackgroundModel<T extends BackgroundModel<T>> extends Abst
 
 	@Override
 	public String toString() {
-		final StringBuilder sb = new StringBuilder("BackgroundModel{");
+		final StringBuilder sb = new StringBuilder("ShadingModel{");
 
 		if (coefficients[nCoefficients() - 1] < 0) {
 			sb.append("-");

@@ -20,8 +20,8 @@ import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.type.numeric.integer.UnsignedShortType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.view.Views;
-import org.janelia.alignment.filter.emshading.BackgroundModel;
-import org.janelia.alignment.filter.emshading.FourthOrderBackground;
+import org.janelia.alignment.filter.emshading.FourthOrderShading;
+import org.janelia.alignment.filter.emshading.ShadingModel;
 import org.janelia.saalfeldlab.n5.N5FSReader;
 import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
@@ -36,7 +36,7 @@ import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-public class CorrectBackground {
+public class CorrectShading {
 
 	public static void main(final String[] args) throws NotEnoughDataPointsException, IllDefinedDataPointsException, IOException {
 
@@ -55,41 +55,41 @@ public class CorrectBackground {
 			}
 
 			final long start = System.currentTimeMillis();
-			final BackgroundModel<?> backgroundModel = new FourthOrderBackground();
-			fitBackgroundModel(rois, firstSlice, backgroundModel);
-			System.out.println("Fitted background model: " + backgroundModel);
+			final ShadingModel<?> shadingModel = new FourthOrderShading();
+			fitBackgroundModel(rois, firstSlice, shadingModel);
+			System.out.println("Fitted shading model: " + shadingModel);
 			System.out.println("Fitting took " + (System.currentTimeMillis() - start) + "ms.");
 
-			final RandomAccessibleInterval<FloatType> background = createBackgroundImage(backgroundModel, firstSlice);
-			final RandomAccessibleInterval<UnsignedByteType> corrected = correctBackground(firstSlice, background, new UnsignedByteType());
+			final RandomAccessibleInterval<FloatType> shading = createBackgroundImage(shadingModel, firstSlice);
+			final RandomAccessibleInterval<UnsignedByteType> corrected = correctBackground(firstSlice, shading, new UnsignedByteType());
 
 			new ImageJ();
 			ImageJFunctions.show(firstSlice, "Original");
-			ImageJFunctions.show(background, "Background");
+			ImageJFunctions.show(shading, "Shading");
 			ImageJFunctions.show(corrected, "Corrected");
 		}
 	}
 
 	public static <T extends NativeType<T> & RealType<T>>
-	void fitBackgroundModel(final List<Roi> rois, final RandomAccessibleInterval<T> slice, final BackgroundModel<?> backgroundModel)
+	void fitBackgroundModel(final List<Roi> rois, final RandomAccessibleInterval<T> slice, final ShadingModel<?> shadingModel)
 			throws NotEnoughDataPointsException, IllDefinedDataPointsException {
 
 		// transform pixel coordinates into [-1, 1] x [-1, 1]
 		final double scaleX = slice.dimension(0) / 2.0;
 		final double scaleY = slice.dimension(1) / 2.0;
 
-		// fit a quadratic background model with all the points in the first slice
+		// fit a quadratic shading model with all the points in the first slice
 		final List<PointMatch> matches = new ArrayList<>();
 		final RandomAccess<T> ra = slice.randomAccess();
 
 		for (final java.awt.Point point : extractInterestPoints(rois)) {
-			final double x = BackgroundModel.scaleCoordinate(point.x, scaleX);
-			final double y = BackgroundModel.scaleCoordinate(point.y, scaleY);
+			final double x = ShadingModel.scaleCoordinate(point.x, scaleX);
+			final double y = ShadingModel.scaleCoordinate(point.y, scaleY);
 			final double z = ra.setPositionAndGet(point.x, point.y).getRealDouble();
 			matches.add(new PointMatch(new Point(new double[]{x, y}), new Point(new double[]{z})));
 		}
-		backgroundModel.fit(matches);
-		backgroundModel.normalize();
+		shadingModel.fit(matches);
+		shadingModel.normalize();
 	}
 
 	private static Set<java.awt.Point> extractInterestPoints(final List<Roi> rois) {
@@ -103,34 +103,34 @@ public class CorrectBackground {
 	}
 
 	public static <T extends NativeType<T> & RealType<T>>
-	RandomAccessibleInterval<FloatType> createBackgroundImage(final BackgroundModel<?> backgroundModel, final RandomAccessibleInterval<T> slice) {
+	RandomAccessibleInterval<FloatType> createBackgroundImage(final ShadingModel<?> shadingModel, final RandomAccessibleInterval<T> slice) {
 
 		// transform pixel coordinates into [-1, 1] x [-1, 1]
 		final double scaleX = slice.dimension(0) / 2.0;
 		final double scaleY = slice.dimension(1) / 2.0;
 
 		final double[] location = new double[2];
-		final RealRandomAccessible<FloatType> background = new FunctionRealRandomAccessible<>(2, (pos, value) -> {
-			location[0] = BackgroundModel.scaleCoordinate(pos.getDoublePosition(0), scaleX);
-			location[1] = BackgroundModel.scaleCoordinate(pos.getDoublePosition(1), scaleY);
-			backgroundModel.applyInPlace(location);
+		final RealRandomAccessible<FloatType> shading = new FunctionRealRandomAccessible<>(2, (pos, value) -> {
+			location[0] = ShadingModel.scaleCoordinate(pos.getDoublePosition(0), scaleX);
+			location[1] = ShadingModel.scaleCoordinate(pos.getDoublePosition(1), scaleY);
+			shadingModel.applyInPlace(location);
 			value.setReal(location[0]);
 		}, FloatType::new);
 
-		return Views.interval(Views.raster(background), slice);
+		return Views.interval(Views.raster(shading), slice);
 	}
 
 	@SuppressWarnings({"rawtypes", "unchecked"})
 	public static <T extends NativeType<T> & RealType<T>>
-	RandomAccessibleInterval<T> correctBackground(final RandomAccessibleInterval<T> slice, final RandomAccessibleInterval<FloatType> background, final T type) {
+	RandomAccessibleInterval<T> correctBackground(final RandomAccessibleInterval<T> slice, final RandomAccessibleInterval<FloatType> shading, final T type) {
 
 		final RandomAccessibleInterval<T> corrected;
 		if (type instanceof UnsignedByteType) {
-			corrected = (RandomAccessibleInterval) Converters.convert(slice, background, (s, b, o) -> {
+			corrected = (RandomAccessibleInterval) Converters.convert(slice, shading, (s, b, o) -> {
 				o.set(UnsignedByteType.getCodedSignedByteChecked((int) (s.getRealDouble() - b.getRealDouble())));
 			}, new UnsignedByteType());
 		} else if (type instanceof UnsignedShortType) {
-			corrected = (RandomAccessibleInterval) Converters.convert(slice, background, (s, b, o) -> {
+			corrected = (RandomAccessibleInterval) Converters.convert(slice, shading, (s, b, o) -> {
 				o.set(UnsignedShortType.getCodedSignedShortChecked((int) (s.getRealDouble() - b.getRealDouble())));
 			}, new UnsignedShortType());
 		} else {

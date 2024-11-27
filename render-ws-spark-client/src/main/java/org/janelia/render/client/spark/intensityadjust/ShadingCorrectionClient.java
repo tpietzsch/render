@@ -16,9 +16,10 @@ import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.broadcast.Broadcast;
 import org.janelia.alignment.util.Grid;
 import org.janelia.render.client.ClientRunner;
-import org.janelia.alignment.filter.emshading.BackgroundModel;
-import org.janelia.alignment.filter.emshading.FourthOrderBackground;
-import org.janelia.alignment.filter.emshading.QuadraticBackground;
+import org.janelia.alignment.filter.emshading.ShadingModel;
+import org.janelia.alignment.filter.emshading.FourthOrderShading;
+import org.janelia.alignment.filter.emshading.QuadraticShading;
+import org.janelia.render.client.emshading.ShadingCorrection_Plugin;
 import org.janelia.render.client.parameter.CommandLineParameters;
 import org.janelia.saalfeldlab.n5.DatasetAttributes;
 import org.janelia.saalfeldlab.n5.N5FSReader;
@@ -40,14 +41,14 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Spark client for background correction by a layer-wise quadratic or fourth order model.
+ * Spark client for shading correction by a layer-wise quadratic or fourth order model.
  * The client takes as input an N5 container with a 3D 16bit dataset and a parameter file, and writes the corrected data
  * to a new dataset in a given container.
  * </p>
  * The parameter file is a json file containing a list of z values and corresponding models. The model for each z value
  * is valid for all z layers starting at the given z value until the next z value in the list.
  * Models are specified by an identifier ("quadratic" or "fourthOrder") and a list of coefficients (6 or 9,
- * respectively). Coefficients can be found interactively using {@link org.janelia.render.client.emshading.BG_Plugin}.
+ * respectively). Coefficients can be found interactively using {@link ShadingCorrection_Plugin}.
  * </p>
  * In particular, the parameter file should have the following format. There is one root array, whose elements have
  * exactly keys: "fromZ", "modelType", and "coefficients"s, e.g.:
@@ -64,7 +65,7 @@ import java.util.Map;
  * ]
  * </pre>
  */
-public class BackgroundCorrectionClient implements Serializable {
+public class ShadingCorrectionClient implements Serializable {
 
     public static class Parameters extends CommandLineParameters {
         @Parameter(names = "--n5In",
@@ -98,7 +99,7 @@ public class BackgroundCorrectionClient implements Serializable {
         public String parameterFile;
     }
 
-    private static final Logger LOG = LoggerFactory.getLogger(BackgroundCorrectionClient.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ShadingCorrectionClient.class);
 
     private final Parameters parameters;
 
@@ -108,7 +109,7 @@ public class BackgroundCorrectionClient implements Serializable {
             public void runClient(final String[] args) throws Exception {
                 final Parameters parameters = new Parameters();
                 parameters.parse(args);
-                final BackgroundCorrectionClient client = new BackgroundCorrectionClient(parameters);
+                final ShadingCorrectionClient client = new ShadingCorrectionClient(parameters);
                 client.run();
             }
         };
@@ -116,13 +117,13 @@ public class BackgroundCorrectionClient implements Serializable {
     }
 
 
-    public BackgroundCorrectionClient(final Parameters parameters) {
+    public ShadingCorrectionClient(final Parameters parameters) {
         LOG.info("init: parameters={}", parameters);
         this.parameters = parameters;
     }
 
     public void run() throws IOException {
-        final SparkConf conf = new SparkConf().setAppName("BackgroundCorrectionClient");
+        final SparkConf conf = new SparkConf().setAppName("ShadingCorrectionClient");
         try (final JavaSparkContext sparkContext = new JavaSparkContext(conf)) {
             final String sparkAppId = sparkContext.getConf().getAppId();
             LOG.info("run: appId is {}", sparkAppId);
@@ -219,7 +220,7 @@ public class BackgroundCorrectionClient implements Serializable {
 
             // process block z-slice by z-slice
             for (int z = (int) block.min(2); z <= block.max(2); z++) {
-                final BackgroundModel<?> model = modelProvider.getModel(z);
+                final ShadingModel<?> model = modelProvider.getModel(z);
                 if (model == null) {
                     LOG.warn("No model found for z={}", z);
                     continue;
@@ -240,8 +241,8 @@ public class BackgroundCorrectionClient implements Serializable {
                         continue;
                     }
 
-                    location[0] = BackgroundModel.scaleCoordinate(imgCursor.getDoublePosition(0), xScale);
-                    location[1] = BackgroundModel.scaleCoordinate(imgCursor.getDoublePosition(1), yScale);
+                    location[0] = ShadingModel.scaleCoordinate(imgCursor.getDoublePosition(0), xScale);
+                    location[1] = ShadingModel.scaleCoordinate(imgCursor.getDoublePosition(1), yScale);
 
                     model.applyInPlace(location);
                     pixel.setReal(UnsignedShortType.getCodedSignedShortChecked((int) (pixel.getRealDouble() - location[0])));
@@ -262,7 +263,7 @@ public class BackgroundCorrectionClient implements Serializable {
             this.sortedModelSpecs.sort(Collections.reverseOrder(Comparator.comparingInt(ModelSpec::getZ)));
         }
 
-        public BackgroundModel<?> getModel(final int z) {
+        public ShadingModel<?> getModel(final int z) {
             for (final ModelSpec modelSpec : sortedModelSpecs) {
                 if (z >= modelSpec.getZ()) {
                     return modelSpec.getModel();
@@ -286,7 +287,7 @@ public class BackgroundCorrectionClient implements Serializable {
             // validation of json data
             for (final ModelSpec modelSpec : modelSpecs) {
                 LOG.info("Found model spec: {}", modelSpec);
-                final BackgroundModel<?> ignored = modelSpec.getModel();
+                final ShadingModel<?> ignored = modelSpec.getModel();
             }
 
             return new BackgroundModelProvider(modelSpecs);
@@ -309,11 +310,11 @@ public class BackgroundCorrectionClient implements Serializable {
                 this.coefficients = coefficients;
             }
 
-            public BackgroundModel<?> getModel() {
+            public ShadingModel<?> getModel() {
                 if (modelType.equals("quadratic")) {
-                    return new QuadraticBackground(coefficients);
+                    return new QuadraticShading(coefficients);
                 } else if (modelType.equals("fourthOrder")) {
-                    return new FourthOrderBackground(coefficients);
+                    return new FourthOrderShading(coefficients);
                 } else {
                     throw new IllegalArgumentException("Unknown model type: " + modelType);
                 }

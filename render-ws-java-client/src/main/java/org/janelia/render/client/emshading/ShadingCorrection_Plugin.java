@@ -15,9 +15,9 @@ import mpicbg.models.NotEnoughDataPointsException;
 import mpicbg.trakem2.transform.TransformMeshMappingWithMasks.ImageProcessorWithMasks;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.type.numeric.real.FloatType;
-import org.janelia.alignment.filter.emshading.BackgroundModel;
-import org.janelia.alignment.filter.emshading.FourthOrderBackground;
-import org.janelia.alignment.filter.emshading.QuadraticBackground;
+import org.janelia.alignment.filter.emshading.QuadraticShading;
+import org.janelia.alignment.filter.emshading.ShadingModel;
+import org.janelia.alignment.filter.emshading.FourthOrderShading;
 import org.janelia.alignment.spec.Bounds;
 import org.janelia.alignment.util.ImageProcessorCache;
 import org.janelia.render.client.RenderDataClient;
@@ -33,7 +33,7 @@ import ij.plugin.frame.RoiManager;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.display.imagej.ImageJFunctions;
 
-public class BG_Plugin implements PlugIn {
+public class ShadingCorrection_Plugin implements PlugIn {
 
 	public static final int MAX_SIZE = 2000 * 2000;
 
@@ -77,10 +77,10 @@ public class BG_Plugin implements PlugIn {
 			return;
 		}
 
-		final GenericDialog gd = new GenericDialog("Fit background correction");
+		final GenericDialog gd = new GenericDialog("Fit shading correction");
 
 		gd.addChoice("Fit type", fitTypes, fitTypes[defaultType]);
-		gd.addCheckbox("Show background image", defaultShowBackground);
+		gd.addCheckbox("Show shading image", defaultShowBackground);
 		gd.showDialog();
 
 		if (gd.wasCanceled()) {
@@ -104,7 +104,7 @@ public class BG_Plugin implements PlugIn {
 		final RoiManager rm = RoiManager.getInstance();
 
 		if (rm == null || rm.getCount() == 0) {
-			IJ.log("Please define ROIs first before running background correction.");
+			IJ.log("Please define ROIs first before running shading correction.");
 			return null;
 		}
 
@@ -114,27 +114,27 @@ public class BG_Plugin implements PlugIn {
 	public static void fit(final int type, final List<Roi> rois, final boolean showBackground) throws NotEnoughDataPointsException, IllDefinedDataPointsException {
 		IJ.log("Fitting with " + fitTypes[type] + " model...");
 
-		final BackgroundModel<?> backgroundModel;
+		final ShadingModel<?> shadingModel;
 		if (fitTypes[type].equals("Quadratic")) {
-			backgroundModel = new QuadraticBackground();
+			shadingModel = new QuadraticShading();
 		} else if (fitTypes[type].equals("Fourth Order")) {
-			backgroundModel = new FourthOrderBackground();
+			shadingModel = new FourthOrderShading();
 		} else {
 			throw new IllegalArgumentException("Unknown fit type: " + fitTypes[type]);
 		}
 
 		final long start = System.currentTimeMillis();
 		final RandomAccessibleInterval<UnsignedByteType> img = ImageJFunctions.wrap(IJ.getImage());
-		CorrectBackground.fitBackgroundModel(rois, img, backgroundModel);
-		IJ.log("Fitted background model: " + backgroundModel);
+		CorrectShading.fitBackgroundModel(rois, img, shadingModel);
+		IJ.log("Fitted shading model: " + shadingModel);
 		IJ.log("Fitting took " + (System.currentTimeMillis() - start) + "ms.");
-		IJ.log("Raw coefficients: " + Arrays.toString(backgroundModel.getCoefficients()));
+		IJ.log("Raw coefficients: " + Arrays.toString(shadingModel.getCoefficients()));
 
-		final RandomAccessibleInterval<FloatType> background = CorrectBackground.createBackgroundImage(backgroundModel, img);
-		final RandomAccessibleInterval<UnsignedByteType> corrected = CorrectBackground.correctBackground(img, background, new UnsignedByteType());
+		final RandomAccessibleInterval<FloatType> shading = CorrectShading.createBackgroundImage(shadingModel, img);
+		final RandomAccessibleInterval<UnsignedByteType> corrected = CorrectShading.correctBackground(img, shading, new UnsignedByteType());
 
 		if (showBackground) {
-			ImageJFunctions.show(background, "Background");
+			ImageJFunctions.show(shading, "Shading");
 		}
 		ImageJFunctions.show(corrected, "Corrected");
 
@@ -148,7 +148,7 @@ public class BG_Plugin implements PlugIn {
 					if (e.getID() == KeyEvent.KEY_PRESSED) {
 						switch (e.getKeyCode()) {
 							case KeyEvent.VK_F1:
-								new BG_Plugin().run(null);
+								new ShadingCorrection_Plugin().run(null);
 								break;
 							case KeyEvent.VK_F2:
 								System.out.println("F2 key pressed (not assigned)");
@@ -164,7 +164,7 @@ public class BG_Plugin implements PlugIn {
 		params.parse(args);
 
 		new ImageJ();
-		SwingUtilities.invokeLater(BG_Plugin::addKeyListener);
+		SwingUtilities.invokeLater(ShadingCorrection_Plugin::addKeyListener);
 
 		IJ.log("Opening " + params.owner + "/" + params.project + "/" + params.stack);
 		IJ.log("Showing slice " + params.z);

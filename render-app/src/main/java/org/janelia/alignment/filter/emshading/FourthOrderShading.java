@@ -4,21 +4,21 @@ import java.util.List;
 
 
 /**
- * A 4th order model for background correction in 2D slices of EM data.
+ * A 4th order model for shading correction in 2D slices of EM data.
  * To ensure that the model is concave, no 3rd order terms are included.
  */
-public class FourthOrderBackground extends BackgroundModel<FourthOrderBackground> {
+public class FourthOrderShading extends ShadingModel<FourthOrderShading> {
 
-	public FourthOrderBackground() {
+	public FourthOrderShading() {
 		super();
 	}
 
-	public FourthOrderBackground(final double[] coefficients) {
+	public FourthOrderShading(final double[] coefficients) {
 		super(coefficients);
 	}
 
-	public FourthOrderBackground(final FourthOrderBackground background) {
-		super(background.getCoefficients());
+	public FourthOrderShading(final FourthOrderShading shading) {
+		super(shading.getCoefficients());
 	}
 
 
@@ -68,7 +68,7 @@ public class FourthOrderBackground extends BackgroundModel<FourthOrderBackground
 	}
 
 	@Override
-	public FourthOrderBackground copy() {
-		return new FourthOrderBackground(this);
+	public FourthOrderShading copy() {
+		return new FourthOrderShading(this);
 	}
 }

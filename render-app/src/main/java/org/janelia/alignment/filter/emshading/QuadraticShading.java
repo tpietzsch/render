@@ -4,20 +4,20 @@ import java.util.List;
 
 
 /**
- * A quadratic model for background correction in 2D slices of EM data.
+ * A quadratic model for shading correction in 2D slices of EM data.
  */
-public class QuadraticBackground extends BackgroundModel<QuadraticBackground> {
+public class QuadraticShading extends ShadingModel<QuadraticShading> {
 
-	public QuadraticBackground() {
+	public QuadraticShading() {
 		super();
 	}
 
-	public QuadraticBackground(final double[] coefficients) {
+	public QuadraticShading(final double[] coefficients) {
 		super(coefficients);
 	}
 
-	public QuadraticBackground(final QuadraticBackground background) {
-		super(background.getCoefficients());
+	public QuadraticShading(final QuadraticShading shading) {
+		super(shading.getCoefficients());
 	}
 
 
@@ -57,7 +57,7 @@ public class QuadraticBackground extends BackgroundModel<QuadraticBackground> {
 	}
 
 	@Override
-	public QuadraticBackground copy() {
-		return new QuadraticBackground(this);
+	public QuadraticShading copy() {
+		return new QuadraticShading(this);
 	}
 }
