@@ -30,9 +30,10 @@ import org.janelia.render.client.spark.intensityadjust.ShadingCorrectionClient.S
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collection;
 import java.util.List;
-import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * Spark client for shading correction by a layer-wise quadratic or fourth order model.
@@ -118,31 +119,28 @@ public class ShadingCorrectionTileClient implements Serializable {
 
         LOG.info("runWithContext: entry");
 
-        final BackgroundModelProvider modelProvider = BackgroundModelProvider.fromJsonFile(parameters.parameterFile);
+        final ShadingModelProvider modelProvider = ShadingModelProvider.fromJsonFile(parameters.parameterFile);
 
         final RenderDataClient renderClient = parameters.webservice.getDataClient();
         setUpTargetStack(renderClient);
 
         final List<Double> zValues = renderClient.getStackZValues(parameters.stack);
-        final double minZ = zValues.get(0);
-        final double maxZ = zValues.get(zValues.size() - 1);
-        final ResolvedTileSpecCollection rtsc = renderClient.getResolvedTilesForZRange(parameters.stack, minZ, maxZ);
+        final List<SectionData> stackSectionData = renderClient.getStackSectionData(parameters.stack, null, null);
 
-        final List<SectionData> sectionData = renderClient.getStackSectionData(parameters.stack, minZ, maxZ);
-        final Map<Integer, SectionData> sectionDataMap = new HashMap<>();
-        sectionData.forEach(section -> sectionDataMap.put(section.getZ().intValue(), section));
+        // parallelize computation over z-layers (broadcasting some data that is needed for all tile specs)
+        final Broadcast<ShadingModelProvider> modelProviderBroadcast = sparkContext.broadcast(modelProvider);
+        final Broadcast<Parameters> parametersBroadcast = sparkContext.broadcast(parameters);
+        final Broadcast<List<SectionData>> sectionDataBroadcast = sparkContext.broadcast(stackSectionData);
+        final Broadcast<List<Double>> zValuesBroadcast = sparkContext.broadcast(zValues);
 
-        // parallelize computation over tile specs (broadcasting some data that is needed for all tile specs)
-        final Broadcast<BackgroundModelProvider> modelProviderBroadcast = sparkContext.broadcast(modelProvider);
-        final Broadcast<Map<Integer, SectionData>> sectionDataBroadcast = sparkContext.broadcast(sectionDataMap);
-
-		final List<TileSpec> tileSpecs = new ArrayList<>(rtsc.getTileSpecs());
-        final List<TileSpec> enrichedTileSpecs = sparkContext.parallelize(tileSpecs)
-                .map(tileSpec -> addBackgroundCorrection(tileSpec, modelProviderBroadcast.value(), sectionDataBroadcast.value()))
-                .collect();
-
-        final ResolvedTileSpecCollection enrichedRtsc = new ResolvedTileSpecCollection(rtsc.getTransformSpecs(), enrichedTileSpecs);
-        renderClient.saveResolvedTiles(enrichedRtsc, parameters.targetStack, null);
+        final List<Integer> zIndices = IntStream.range(0, zValues.size()).boxed().collect(Collectors.toList());
+        sparkContext.parallelize(zIndices)
+                .foreach(zIndex -> {
+                    final Double z = zValuesBroadcast.getValue().get(zIndex);
+                    final ShadingModel layerModel = modelProviderBroadcast.getValue().getModel(z.intValue());
+                    final SectionData layerSectionData = sectionDataBroadcast.getValue().get(zIndex);
+                    addShadingCorrectionToLayer(z, layerModel, parametersBroadcast.value(), layerSectionData);
+                });
 
         completeTargetStack(renderClient);
 
@@ -160,61 +158,84 @@ public class ShadingCorrectionTileClient implements Serializable {
         LOG.info("completeTargetStack: setup stack {}", parameters.targetStack);
     }
 
-    private TileSpec addBackgroundCorrection(
-            final TileSpec tileSpec,
-            final BackgroundModelProvider modelProvider,
-            final Map<Integer, SectionData> sectionData
-    ) {
-        final int z = tileSpec.getZ().intValue();
-        final ShadingModel layerModel = modelProvider.getModel(z);
+    private void addShadingCorrectionToLayer(
+            final Double z,
+            final ShadingModel layerModel,
+            final Parameters parameters,
+            final SectionData layerSectionData
+    ) throws IOException {
+
+        final RenderDataClient renderClient = parameters.webservice.getDataClient();
+        final ResolvedTileSpecCollection rtsc = renderClient.getResolvedTiles(parameters.stack, z);
+
         if (layerModel == null) {
             LOG.warn("No model found for z={}", z);
-            return tileSpec;
+        } else {
+            final Collection<TileSpec> tileSpecs = rtsc.getTileSpecs();
+            LOG.info("Adding shading correction for {} tile specs, z={}", tileSpecs.size(), z);
+
+            for (final TileSpec tileSpec : tileSpecs) {
+                addShadingCorrectionToTileSpec(tileSpec, layerModel, layerSectionData);
+            }
         }
 
-        // get uniform grid of points in tile
-        final int nSamples = (int) Math.ceil(Math.sqrt(layerModel.getMinNumMatches()));
-        final List<double[]> points = gridOnTile(tileSpec, nSamples);
+        renderClient.saveResolvedTiles(rtsc, parameters.targetStack, z);
+    }
 
-        final SectionData section = sectionData.get(z);
-        final double scaleX = section.getMinX() + 0.5 * section.getWidth();
-        final double scaleY = section.getMinY() + 0.5 * section.getHeight();
+    private void addShadingCorrectionToTileSpec(
+        final TileSpec tileSpec,
+        final ShadingModel layerModel,
+        final SectionData sectionData
+    ) {
+		// get uniform grid of points in tile
+        final int nSamples = (int) Math.ceil(Math.sqrt(layerModel.getMinNumMatches()));
+        final List<double[]> points = uniformGrid(nSamples);
+
+        final double centerX = sectionData.getMinX() + 0.5 * sectionData.getWidth();
+        final double centerY = sectionData.getMinY() + 0.5 * sectionData.getHeight();
 
         final CoordinateTransformList<CoordinateTransform> transforms = tileSpec.getTransformList();
         final List<PointMatch> matches = new ArrayList<>();
 
-        for (final double[] tilePoint : points) {
-            // transform point to global space and evaluate shading model
-            final double[] globalPoint = transforms.apply(tilePoint);
-            final double[] value = layerModel.apply(globalPoint);
+        final double[] transformedPoint = new double[2];
+        for (final double[] tilePointNormalized : points) {
+            // transform normalized tile point (in [-1, 1] x [-1, 1]) to tile coordinates
+            transformedPoint[0] = (tilePointNormalized[0] + 1) * tileSpec.getWidth() / 2.0;
+            transformedPoint[1] = (tilePointNormalized[1] + 1) * tileSpec.getHeight() / 2.0;
 
-            // scale coordinates to [-1, 1] to fit a local model on the tile
-            tilePoint[0] = ShadingModel.scaleCoordinate(tilePoint[0], scaleX);
-            tilePoint[1] = ShadingModel.scaleCoordinate(tilePoint[1], scaleY);
-            matches.add(new PointMatch(new Point(tilePoint), new Point(value)));
+            // transform tile point to global coordinate system
+            transforms.applyInPlace(transformedPoint);
+
+            // transform global coordinate to [-1, 1] x [-1, 1] wrt to the layer bounds
+            transformedPoint[0] = (transformedPoint[0] - centerX) / (sectionData.getWidth() / 2.0);
+            transformedPoint[1] = (transformedPoint[1] - centerY) / (sectionData.getHeight() / 2.0);
+
+            // scale coordinates to [-1, 1] to evaluate the global model
+            layerModel.applyInPlace(transformedPoint);
+            final double[] value = new double[] {transformedPoint[0], 0};
+            matches.add(new PointMatch(new Point(tilePointNormalized), new Point(value)));
         }
 
+        final ShadingModel tileModel = layerModel.copy();
 		try {
-			layerModel.fit(matches);
+			tileModel.fit(matches);
 		} catch (final NotEnoughDataPointsException | IllDefinedDataPointsException e) {
 			throw new RuntimeException(e);
 		}
 
         // convert to filter and add to tile spec
-        final ShadingCorrectionFilter filter = new ShadingCorrectionFilter(layerModel);
+        final ShadingCorrectionFilter filter = new ShadingCorrectionFilter(tileModel);
         tileSpec.setFilterSpec(FilterSpec.forFilter(filter));
-
-		return tileSpec;
     }
 
-    final List<double[]> gridOnTile(final TileSpec tileSpec, final int n) {
+    final List<double[]> uniformGrid(final int n) {
         final List<double[]> points = new ArrayList<>();
 
-        final double incrementX = (double) tileSpec.getWidth() / (n - 1);
-        final double incrementY = (double) tileSpec.getHeight() / (n - 1);
+        final double increment = 2.0 / (n - 1);
+        final double eps = 1e-8;
 
-        for (double x = tileSpec.getMinX(); x < tileSpec.getMaxX(); x += incrementX) {
-            for (double y = tileSpec.getMinY(); y < tileSpec.getMaxY(); y += incrementY) {
+        for (double x = -1; x < 1 + eps; x += increment) {
+            for (double y = -1; y < 1 + eps; y += increment) {
                 final double[] point = new double[] {x, y};
                 points.add(point);
             }
