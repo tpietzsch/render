@@ -115,10 +115,13 @@ public class ShadingCorrection_Plugin implements PlugIn {
 		IJ.log("Fitting with " + fitTypes[type] + " model...");
 
 		final ShadingModel shadingModel;
+		final String modelType;
 		if (fitTypes[type].equals("Quadratic")) {
 			shadingModel = new QuadraticShading();
+			modelType = "quadratic";
 		} else if (fitTypes[type].equals("Fourth Order")) {
 			shadingModel = new FourthOrderShading();
+			modelType = "fourthOrder";
 		} else {
 			throw new IllegalArgumentException("Unknown fit type: " + fitTypes[type]);
 		}
@@ -128,7 +131,8 @@ public class ShadingCorrection_Plugin implements PlugIn {
 		CorrectShading.fitBackgroundModel(rois, img, shadingModel);
 		IJ.log("Fitted shading model: " + shadingModel);
 		IJ.log("Fitting took " + (System.currentTimeMillis() - start) + "ms.");
-		IJ.log("Raw coefficients: " + Arrays.toString(shadingModel.getCoefficients()));
+		IJ.log("\"modelType\": \"" + modelType + "\",");
+		IJ.log("\"coefficients\": " + Arrays.toString(shadingModel.getCoefficients()));
 
 		final RandomAccessibleInterval<FloatType> shading = CorrectShading.createBackgroundImage(shadingModel, img);
 		final RandomAccessibleInterval<UnsignedShortType> corrected = CorrectShading.correctBackground(img, shading, new UnsignedShortType());

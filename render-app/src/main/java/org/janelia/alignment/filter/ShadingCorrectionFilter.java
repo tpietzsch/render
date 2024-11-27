@@ -9,6 +9,7 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class ShadingCorrectionFilter implements Filter {
 
@@ -74,7 +75,7 @@ public class ShadingCorrectionFilter implements Filter {
     public Map<String, String> toParametersMap() {
         final Map<String, String> map = new LinkedHashMap<>();
         map.put("correctionMethod", correctionMethod.name());
-        map.put("coefficients", Arrays.toString(coefficients));
+        map.put("coefficients", Arrays.stream(coefficients).mapToObj(String::valueOf).collect(Collectors.joining(",")));
         return map;
     }
 
