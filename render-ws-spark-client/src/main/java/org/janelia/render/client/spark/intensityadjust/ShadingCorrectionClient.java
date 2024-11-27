@@ -220,7 +220,7 @@ public class ShadingCorrectionClient implements Serializable {
 
             // process block z-slice by z-slice
             for (int z = (int) block.min(2); z <= block.max(2); z++) {
-                final ShadingModel<?> model = modelProvider.getModel(z);
+                final ShadingModel model = modelProvider.getModel(z);
                 if (model == null) {
                     LOG.warn("No model found for z={}", z);
                     continue;
@@ -263,7 +263,7 @@ public class ShadingCorrectionClient implements Serializable {
             this.sortedModelSpecs.sort(Collections.reverseOrder(Comparator.comparingInt(ModelSpec::getZ)));
         }
 
-        public ShadingModel<?> getModel(final int z) {
+        public ShadingModel getModel(final int z) {
             for (final ModelSpec modelSpec : sortedModelSpecs) {
                 if (z >= modelSpec.getZ()) {
                     return modelSpec.getModel();
@@ -287,7 +287,7 @@ public class ShadingCorrectionClient implements Serializable {
             // validation of json data
             for (final ModelSpec modelSpec : modelSpecs) {
                 LOG.info("Found model spec: {}", modelSpec);
-                final ShadingModel<?> ignored = modelSpec.getModel();
+                final ShadingModel ignored = modelSpec.getModel();
             }
 
             return new BackgroundModelProvider(modelSpecs);
@@ -310,7 +310,7 @@ public class ShadingCorrectionClient implements Serializable {
                 this.coefficients = coefficients;
             }
 
-            public ShadingModel<?> getModel() {
+            public ShadingModel getModel() {
                 if (modelType.equals("quadratic")) {
                     return new QuadraticShading(coefficients);
                 } else if (modelType.equals("fourthOrder")) {

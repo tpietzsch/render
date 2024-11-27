@@ -16,7 +16,7 @@ import java.util.List;
 /**
  * An abstract base model for shading correction in 2D slices of EM data.
  */
-public abstract class ShadingModel<T extends ShadingModel<T>> extends AbstractModel<T> implements Serializable {
+public abstract class ShadingModel extends AbstractModel<ShadingModel> implements Serializable {
 
 	private final double[] coefficients;
 
@@ -122,7 +122,7 @@ public abstract class ShadingModel<T extends ShadingModel<T>> extends AbstractMo
 	}
 
 	@Override
-	public void set(final T model) {
+	public void set(final ShadingModel model) {
 		System.arraycopy(model.getCoefficients(), 0, coefficients, 0, nCoefficients());
 	}
 

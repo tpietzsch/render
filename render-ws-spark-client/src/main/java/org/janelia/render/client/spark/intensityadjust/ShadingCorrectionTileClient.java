@@ -166,7 +166,7 @@ public class ShadingCorrectionTileClient implements Serializable {
             final Map<Integer, SectionData> sectionData
     ) {
         final int z = tileSpec.getZ().intValue();
-        final ShadingModel<?> layerModel = modelProvider.getModel(z);
+        final ShadingModel layerModel = modelProvider.getModel(z);
         if (layerModel == null) {
             LOG.warn("No model found for z={}", z);
             return tileSpec;

@@ -16,13 +16,13 @@ public class ShadingCorrectionFilter implements Filter {
         QUADRATIC(QuadraticShading::new),
         FOURTH_ORDER(FourthOrderShading::new);
 
-        private final Function<double[], ShadingModel<?>> modelFactory;
+        private final Function<double[], ShadingModel> modelFactory;
 
-        ShadingCorrectionMethod(final Function<double[], ShadingModel<?>> modelFactory) {
+        ShadingCorrectionMethod(final Function<double[], ShadingModel> modelFactory) {
             this.modelFactory = modelFactory;
         }
 
-        public ShadingModel<?> create(final double[] coefficients) {
+        public ShadingModel create(final double[] coefficients) {
             return modelFactory.apply(coefficients);
         }
 
@@ -35,7 +35,7 @@ public class ShadingCorrectionFilter implements Filter {
             throw new IllegalArgumentException("Unknown shading correction method: " + method);
         }
 
-        public static ShadingCorrectionMethod forModel(final ShadingModel<?> model) {
+        public static ShadingCorrectionMethod forModel(final ShadingModel model) {
             if (model instanceof QuadraticShading) {
                 return QUADRATIC;
             } else if (model instanceof FourthOrderShading) {
@@ -54,7 +54,7 @@ public class ShadingCorrectionFilter implements Filter {
     public ShadingCorrectionFilter() {
     }
 
-    public ShadingCorrectionFilter(final ShadingModel<?> model) {
+    public ShadingCorrectionFilter(final ShadingModel model) {
         this(ShadingCorrectionMethod.forModel(model), model.getCoefficients());
     }
 
@@ -83,7 +83,7 @@ public class ShadingCorrectionFilter implements Filter {
         // transform pixel coordinates into [-1, 1] x [-1, 1]
         final double scaleX = ip.getWidth() / 2.0;
         final double scaleY = ip.getHeight() / 2.0;
-        final ShadingModel<?> shadingModel = correctionMethod.create(coefficients);
+        final ShadingModel shadingModel = correctionMethod.create(coefficients);
 
         // subtract shading model from image
         final double[] location = new double[2];

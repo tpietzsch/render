@@ -55,7 +55,7 @@ public class CorrectShading {
 			}
 
 			final long start = System.currentTimeMillis();
-			final ShadingModel<?> shadingModel = new FourthOrderShading();
+			final ShadingModel shadingModel = new FourthOrderShading();
 			fitBackgroundModel(rois, firstSlice, shadingModel);
 			System.out.println("Fitted shading model: " + shadingModel);
 			System.out.println("Fitting took " + (System.currentTimeMillis() - start) + "ms.");
@@ -71,7 +71,7 @@ public class CorrectShading {
 	}
 
 	public static <T extends NativeType<T> & RealType<T>>
-	void fitBackgroundModel(final List<Roi> rois, final RandomAccessibleInterval<T> slice, final ShadingModel<?> shadingModel)
+	void fitBackgroundModel(final List<Roi> rois, final RandomAccessibleInterval<T> slice, final ShadingModel shadingModel)
 			throws NotEnoughDataPointsException, IllDefinedDataPointsException {
 
 		// transform pixel coordinates into [-1, 1] x [-1, 1]
@@ -103,7 +103,7 @@ public class CorrectShading {
 	}
 
 	public static <T extends NativeType<T> & RealType<T>>
-	RandomAccessibleInterval<FloatType> createBackgroundImage(final ShadingModel<?> shadingModel, final RandomAccessibleInterval<T> slice) {
+	RandomAccessibleInterval<FloatType> createBackgroundImage(final ShadingModel shadingModel, final RandomAccessibleInterval<T> slice) {
 
 		// transform pixel coordinates into [-1, 1] x [-1, 1]
 		final double scaleX = slice.dimension(0) / 2.0;

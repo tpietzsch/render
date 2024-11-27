@@ -7,7 +7,7 @@ import java.util.List;
  * A 4th order model for shading correction in 2D slices of EM data.
  * To ensure that the model is concave, no 3rd order terms are included.
  */
-public class FourthOrderShading extends ShadingModel<FourthOrderShading> {
+public class FourthOrderShading extends ShadingModel {
 
 	public FourthOrderShading() {
 		super();

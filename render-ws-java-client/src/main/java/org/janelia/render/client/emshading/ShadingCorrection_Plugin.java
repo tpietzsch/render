@@ -13,7 +13,7 @@ import ij.ImagePlus;
 import mpicbg.models.IllDefinedDataPointsException;
 import mpicbg.models.NotEnoughDataPointsException;
 import mpicbg.trakem2.transform.TransformMeshMappingWithMasks.ImageProcessorWithMasks;
-import net.imglib2.type.numeric.integer.UnsignedByteType;
+import net.imglib2.type.numeric.integer.UnsignedShortType;
 import net.imglib2.type.numeric.real.FloatType;
 import org.janelia.alignment.filter.emshading.QuadraticShading;
 import org.janelia.alignment.filter.emshading.ShadingModel;
@@ -114,7 +114,7 @@ public class ShadingCorrection_Plugin implements PlugIn {
 	public static void fit(final int type, final List<Roi> rois, final boolean showBackground) throws NotEnoughDataPointsException, IllDefinedDataPointsException {
 		IJ.log("Fitting with " + fitTypes[type] + " model...");
 
-		final ShadingModel<?> shadingModel;
+		final ShadingModel shadingModel;
 		if (fitTypes[type].equals("Quadratic")) {
 			shadingModel = new QuadraticShading();
 		} else if (fitTypes[type].equals("Fourth Order")) {
@@ -124,14 +124,14 @@ public class ShadingCorrection_Plugin implements PlugIn {
 		}
 
 		final long start = System.currentTimeMillis();
-		final RandomAccessibleInterval<UnsignedByteType> img = ImageJFunctions.wrap(IJ.getImage());
+		final RandomAccessibleInterval<UnsignedShortType> img = ImageJFunctions.wrap(IJ.getImage());
 		CorrectShading.fitBackgroundModel(rois, img, shadingModel);
 		IJ.log("Fitted shading model: " + shadingModel);
 		IJ.log("Fitting took " + (System.currentTimeMillis() - start) + "ms.");
 		IJ.log("Raw coefficients: " + Arrays.toString(shadingModel.getCoefficients()));
 
 		final RandomAccessibleInterval<FloatType> shading = CorrectShading.createBackgroundImage(shadingModel, img);
-		final RandomAccessibleInterval<UnsignedByteType> corrected = CorrectShading.correctBackground(img, shading, new UnsignedByteType());
+		final RandomAccessibleInterval<UnsignedShortType> corrected = CorrectShading.correctBackground(img, shading, new UnsignedShortType());
 
 		if (showBackground) {
 			ImageJFunctions.show(shading, "Shading");

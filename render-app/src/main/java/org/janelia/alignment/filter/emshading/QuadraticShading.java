@@ -6,7 +6,7 @@ import java.util.List;
 /**
  * A quadratic model for shading correction in 2D slices of EM data.
  */
-public class QuadraticShading extends ShadingModel<QuadraticShading> {
+public class QuadraticShading extends ShadingModel {
 
 	public QuadraticShading() {
 		super();
