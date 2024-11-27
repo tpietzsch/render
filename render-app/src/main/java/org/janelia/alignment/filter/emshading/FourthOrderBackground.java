@@ -1,4 +1,4 @@
-package org.janelia.render.client.embackground;
+package org.janelia.alignment.filter.emshading;
 
 import java.util.List;
 

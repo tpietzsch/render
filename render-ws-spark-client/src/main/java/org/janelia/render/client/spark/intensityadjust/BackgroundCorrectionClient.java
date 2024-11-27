@@ -16,9 +16,9 @@ import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.broadcast.Broadcast;
 import org.janelia.alignment.util.Grid;
 import org.janelia.render.client.ClientRunner;
-import org.janelia.render.client.embackground.BackgroundModel;
-import org.janelia.render.client.embackground.FourthOrderBackground;
-import org.janelia.render.client.embackground.QuadraticBackground;
+import org.janelia.alignment.filter.emshading.BackgroundModel;
+import org.janelia.alignment.filter.emshading.FourthOrderBackground;
+import org.janelia.alignment.filter.emshading.QuadraticBackground;
 import org.janelia.render.client.parameter.CommandLineParameters;
 import org.janelia.saalfeldlab.n5.DatasetAttributes;
 import org.janelia.saalfeldlab.n5.N5FSReader;
@@ -47,7 +47,7 @@ import java.util.Map;
  * The parameter file is a json file containing a list of z values and corresponding models. The model for each z value
  * is valid for all z layers starting at the given z value until the next z value in the list.
  * Models are specified by an identifier ("quadratic" or "fourthOrder") and a list of coefficients (6 or 9,
- * respectively). Coefficients can be found interactively using {@link org.janelia.render.client.embackground.BG_Plugin}.
+ * respectively). Coefficients can be found interactively using {@link org.janelia.render.client.emshading.BG_Plugin}.
  * </p>
  * In particular, the parameter file should have the following format. There is one root array, whose elements have
  * exactly keys: "fromZ", "modelType", and "coefficients"s, e.g.:
@@ -254,7 +254,7 @@ public class BackgroundCorrectionClient implements Serializable {
     }
 
 
-    private static class BackgroundModelProvider implements Serializable {
+    static class BackgroundModelProvider implements Serializable {
         private final List<ModelSpec> sortedModelSpecs;
 
         private BackgroundModelProvider(final List<ModelSpec> modelSpecs) {

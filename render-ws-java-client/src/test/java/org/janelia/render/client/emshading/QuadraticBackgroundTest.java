@@ -1,9 +1,10 @@
-package org.janelia.render.client.embackground;
+package org.janelia.render.client.emshading;
 
 import mpicbg.models.IllDefinedDataPointsException;
 import mpicbg.models.NotEnoughDataPointsException;
 import mpicbg.models.Point;
 import mpicbg.models.PointMatch;
+import org.janelia.alignment.filter.emshading.QuadraticBackground;
 import org.junit.Assert;
 import org.junit.Test;
 

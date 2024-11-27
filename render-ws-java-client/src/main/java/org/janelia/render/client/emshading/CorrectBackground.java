@@ -1,4 +1,4 @@
-package org.janelia.render.client.embackground;
+package org.janelia.render.client.emshading;
 
 import ij.ImageJ;
 import ij.gui.Roi;
@@ -20,6 +20,8 @@ import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.type.numeric.integer.UnsignedShortType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.view.Views;
+import org.janelia.alignment.filter.emshading.BackgroundModel;
+import org.janelia.alignment.filter.emshading.FourthOrderBackground;
 import org.janelia.saalfeldlab.n5.N5FSReader;
 import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;

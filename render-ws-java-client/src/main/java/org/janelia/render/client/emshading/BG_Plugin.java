@@ -1,4 +1,4 @@
-package org.janelia.render.client.embackground;
+package org.janelia.render.client.emshading;
 
 import java.awt.*;
 import java.awt.event.KeyEvent;
@@ -15,6 +15,9 @@ import mpicbg.models.NotEnoughDataPointsException;
 import mpicbg.trakem2.transform.TransformMeshMappingWithMasks.ImageProcessorWithMasks;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.type.numeric.real.FloatType;
+import org.janelia.alignment.filter.emshading.BackgroundModel;
+import org.janelia.alignment.filter.emshading.FourthOrderBackground;
+import org.janelia.alignment.filter.emshading.QuadraticBackground;
 import org.janelia.alignment.spec.Bounds;
 import org.janelia.alignment.util.ImageProcessorCache;
 import org.janelia.render.client.RenderDataClient;
