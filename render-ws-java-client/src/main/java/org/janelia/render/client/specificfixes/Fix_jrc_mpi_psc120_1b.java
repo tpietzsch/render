@@ -1,11 +1,27 @@
 package org.janelia.render.client.specificfixes;
 
 import ij.ImageJ;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 import mpicbg.models.AffineModel1D;
 import mpicbg.models.IllDefinedDataPointsException;
 import mpicbg.models.NotEnoughDataPointsException;
 import mpicbg.models.Point;
 import mpicbg.models.PointMatch;
+
+import org.janelia.alignment.filter.AffineIntensityFilter;
+import org.janelia.alignment.filter.FilterSpec;
+import org.janelia.alignment.spec.ResolvedTileSpecCollection;
+import org.janelia.render.client.CopyStackClient;
+import org.janelia.render.client.RenderDataClient;
+import org.janelia.saalfeldlab.n5.N5FSReader;
+import org.janelia.saalfeldlab.n5.N5Reader;
+import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
+
 import net.imglib2.Cursor;
 import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
@@ -14,14 +30,6 @@ import net.imglib2.converter.Converters;
 import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.type.numeric.integer.UnsignedShortType;
 import net.imglib2.view.Views;
-import org.janelia.saalfeldlab.n5.N5FSReader;
-import org.janelia.saalfeldlab.n5.N5Reader;
-import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 
 /**
@@ -32,10 +40,14 @@ public class Fix_jrc_mpi_psc120_1b {
 	static final String N5_PATH = "/nrs/fibsem/data/jrc_mpi_psc120_1b/jrc_mpi_psc120_1b.n5";
 	static final String DATASET = "/render/jrc_mpi_psc120_1b/v3_acquire_align_16bit_destreak___20241124_174721/s0";
 	static final Interval ROI = new FinalInterval(new long[] {1000, 1000}, new long[] {2000, 2000});
-	static final boolean VISUALIZE = true;
+	static final boolean VISUALIZE = false;
 
+	public static void main(final String[] args) throws Exception {
+		// compareAndView();
+		createStackWithFilteredIntensities();
+	}
 
-	public static void main(final String[] args) throws IOException {
+	private static void compareAndView() {
 		try (final N5Reader n5 = new N5FSReader(N5_PATH)) {
 			final RandomAccessibleInterval<UnsignedShortType> image = N5Utils.open(n5, DATASET);
 
@@ -46,6 +58,59 @@ public class Fix_jrc_mpi_psc120_1b {
 			// for this outlier layer, 0.507, b = 19960 seems to be a good value
 			compareIntensities(image, 468, 467);
 		}
+	}
+
+	private static void createStackWithFilteredIntensities()
+            throws Exception {
+
+		final String owner = "fibsem";
+		final String project = "jrc_mpi_psc120_1b";
+		final String stack = "v3_acquire_align_16bit_destreak";
+
+		final String toStack = stack + "_with_fix";
+		final String[] effectiveArgs = {
+				"--baseDataUrl", "http://em-services-1.int.janelia.org:8080/render-ws/v1",
+				"--owner", owner,
+				"--project", project,
+				"--fromStack", stack,
+				"--toStack", toStack,
+				"--keepExisting",
+		};
+
+		final CopyStackClient.Parameters parameters = new CopyStackClient.Parameters();
+		parameters.parse(effectiveArgs);
+		final CopyStackClient client = new CopyStackClient(parameters);
+
+		client.setUpDerivedStack();
+		client.copyLayers();
+
+		final RenderDataClient renderDataClient = new RenderDataClient(parameters.renderWeb.baseDataUrl,
+																	   owner,
+																	   project);
+		addFilter(renderDataClient, toStack, 111, 466, 0.705, 11800);
+		addFilter(renderDataClient, toStack, 467, 467, 0.507, 19960);
+
+		client.completeToStack();
+	}
+
+	@SuppressWarnings("SameParameterValue")
+    private static void addFilter(final RenderDataClient renderDataClient,
+                                  final String stack,
+                                  final double minZ,
+                                  final double maxZ,
+                                  final double a,
+                                  final double b)
+            throws IOException {
+
+		final AffineIntensityFilter filter = new AffineIntensityFilter(a, b);
+		final FilterSpec filterSpec = new FilterSpec(filter.getClass().getName(), filter.toParametersMap());
+		final ResolvedTileSpecCollection resolvedTiles =
+				renderDataClient.getResolvedTiles(stack, minZ, maxZ,
+												  null,
+												  null, null, null, null,
+												  null);
+		resolvedTiles.getTileSpecs().forEach(tileSpec -> tileSpec.setFilterSpec(filterSpec));
+		renderDataClient.saveResolvedTiles(resolvedTiles, stack, null);
 	}
 
 	private static void compareIntensities(
