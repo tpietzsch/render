@@ -179,11 +179,11 @@ public class ShadingCorrection_Plugin implements PlugIn {
 
 	private static ImagePlus renderImage(final Parameters params) throws IOException {
 		final RenderDataClient client = new RenderDataClient(baseUrl, params.owner, params.project);
-		final Bounds layerBounds = client.getLayerBounds(params.stack, (double) params.z);
-		final long x = layerBounds.getMinX().longValue();
-		final long y = layerBounds.getMinY().longValue();
-		final long w = layerBounds.getWidth();
-		final long h = layerBounds.getHeight();
+		final Bounds stackBounds = client.getStackMetaData(params.stack).getStackBounds();
+		final long x = stackBounds.getMinX().longValue();
+		final long y = stackBounds.getMinY().longValue();
+		final long w = stackBounds.getWidth();
+		final long h = stackBounds.getHeight();
 
 		if (params.scale == 0.0) {
 			// automatically determine downscale factor
