@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 
 import org.janelia.alignment.match.CanvasId;
 import org.janelia.alignment.match.OrderedCanvasIdPair;
+import org.janelia.alignment.multisem.MultiSemUtilities;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -193,7 +194,8 @@ public class TileBoundsRTree {
                                                        final Double explicitRadius,
                                                        final boolean excludeCornerNeighbors,
                                                        final boolean excludeSameLayerNeighbors,
-                                                       final boolean excludeSameSectionNeighbors) {
+                                                       final boolean excludeSameSectionNeighbors,
+                                                       final boolean excludeSameMfovNeighbors) {
 
         String firstTileId = null;
         if (! sourceTileBoundsList.isEmpty()) {
@@ -232,14 +234,16 @@ public class TileBoundsRTree {
 
                 neighborTileIdPairs.addAll(
                         getDistinctPairs(tileBounds, searchResults,
-                                         excludeCornerNeighbors, excludeSameSectionNeighbors, true));
+                                         excludeCornerNeighbors, excludeSameSectionNeighbors, excludeSameMfovNeighbors,
+                                         true));
             }
 
             for (final TileBoundsRTree neighborTree : neighborTrees) {
                 searchResults = neighborTree.findTilesInCircle(circle);
                 neighborTileIdPairs.addAll(
                         getDistinctPairs(tileBounds, searchResults,
-                                         excludeCornerNeighbors, excludeSameSectionNeighbors, false));
+                                         excludeCornerNeighbors, excludeSameSectionNeighbors, excludeSameMfovNeighbors,
+                                         false));
             }
         }
 
@@ -281,9 +285,11 @@ public class TileBoundsRTree {
                                                             final List<TileBounds> toTiles,
                                                             final boolean excludeCornerNeighbors,
                                                             final boolean excludeSameSectionNeighbors,
+                                                            final boolean excludeSameMfovNeighbors,
                                                             final boolean includeRelativePosition) {
         final Set<OrderedCanvasIdPair> pairs = new HashSet<>(toTiles.size() * 2);
         final String pTileId = fromTile.getTileId();
+        final String pMfov = excludeSameMfovNeighbors ? MultiSemUtilities.getMFOVForTileId(pTileId) : null;
 
         final double fromMinX = fromTile.getMinX();
         final double fromMaxX = fromTile.getMaxX();
@@ -301,6 +307,10 @@ public class TileBoundsRTree {
                     if ((! excludeCornerNeighbors) ||
                         isNeighborCenterInRange(fromMinX, fromMaxX, toTile.getMinX(), toTile.getMaxX()) ||
                         isNeighborCenterInRange(fromMinY, fromMaxY, toTile.getMinY(), toTile.getMaxY())) {
+
+                        if (excludeSameMfovNeighbors && (pMfov.equals(MultiSemUtilities.getMFOVForTileId(qTileId)))) {
+                            continue;
+                        }
 
                         final OrderedCanvasIdPair pair;
                         if (includeRelativePosition) {

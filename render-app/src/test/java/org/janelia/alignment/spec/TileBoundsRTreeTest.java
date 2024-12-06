@@ -74,6 +74,7 @@ public class TileBoundsRTreeTest {
                                                                                     null,
                                                                                     false,
                                                                                     false,
+                                                                                    false,
                                                                                     false);
 
         final Set<OrderedCanvasIdPair> expectedPairs = new TreeSet<>();
@@ -92,6 +93,7 @@ public class TileBoundsRTreeTest {
                                              neighborTrees,
                                              1.1,
                                              explicitRadius,
+                                             false,
                                              false,
                                              false,
                                              false);
@@ -123,6 +125,7 @@ public class TileBoundsRTreeTest {
                                                                                    null,
                                                                                    false,
                                                                                    false,
+                                                                                   false,
                                                                                    false);
 
         final Set<OrderedCanvasIdPair> expectedPairs = new TreeSet<>();
@@ -147,15 +150,53 @@ public class TileBoundsRTreeTest {
         final TileBounds centerTile = tileBoundsList.get(4);
 
         Set<OrderedCanvasIdPair> pairs =
-                TileBoundsRTree.getDistinctPairs(centerTile, tileBoundsList, false, false, false);
+                TileBoundsRTree.getDistinctPairs(centerTile,
+                                                 tileBoundsList,
+                                                 false,
+                                                 false,
+                                                 false,
+                                                 false);
         int expectedNumberOfCombinations = tileBoundsList.size() - 1; // all tiles except the center
         Assert.assertEquals("incorrect number of combinations (with corner neighbors) in " + pairs,
                             expectedNumberOfCombinations, pairs.size());
 
         expectedNumberOfCombinations = expectedNumberOfCombinations - 4; // remove the 4 corner tiles
-        pairs = TileBoundsRTree.getDistinctPairs(centerTile, tileBoundsList, true, false, true);
+        pairs = TileBoundsRTree.getDistinctPairs(centerTile,
+                                                 tileBoundsList,
+                                                 true,
+                                                 false,
+                                                 false,
+                                                 true);
         Assert.assertEquals("incorrect number of combinations (without corner neighbors) in " + pairs,
                             expectedNumberOfCombinations, pairs.size());
+    }
+
+    @Test
+    public void testGetDifferentMFovCanvasIdPairs() {
+
+        final Double z = 1.0;
+        final String sectionId = String.valueOf(z);
+        // s082  s083  s084
+        //    s071  s070
+        final List<TileBounds> tileBoundsList = Arrays.asList(
+                new TileBounds("w60_magc0399_scan012_m0013_s082", sectionId, z, 5.0, 0.0, 17.0, 12.0),
+                new TileBounds("w60_magc0399_scan012_m0013_s083", sectionId, z, 15.0, 0.0, 27.0, 12.0),
+                new TileBounds("w60_magc0399_scan012_m0013_s084", sectionId, z, 25.0, 0.0, 37.0, 12.0),
+                new TileBounds("w60_magc0399_scan012_m0014_s071", sectionId, z, 10.0, 10.0, 22.0, 22.0),
+                new TileBounds("w60_magc0399_scan012_m0014_s070", sectionId, z, 20.0, 10.0, 32.0, 22.0)
+        );
+
+        final TileBounds testTile = tileBoundsList.get(1); // s083
+
+        final Set<OrderedCanvasIdPair> pairs =
+                TileBoundsRTree.getDistinctPairs(testTile,
+                                                 tileBoundsList,
+                                                 false,
+                                                 false,
+                                                 true,
+                                                 false);
+        Assert.assertEquals("incorrect number of combinations in " + pairs,
+                            2, pairs.size());
     }
 
     @Test

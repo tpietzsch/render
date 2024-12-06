@@ -20,6 +20,7 @@ import org.janelia.alignment.match.CanvasId;
 import org.janelia.alignment.match.CanvasMatches;
 import org.janelia.alignment.match.Matches;
 import org.janelia.alignment.match.OrderedCanvasIdPair;
+import org.janelia.alignment.multisem.MultiSemUtilities;
 import org.janelia.alignment.spec.TileSpec;
 import org.janelia.render.client.RenderDataClient;
 import org.slf4j.Logger;
@@ -81,7 +82,7 @@ public class MFOVPositionPairMatchData
     }
 
     public boolean hasUnconnectedPairs() {
-        return unconnectedPairsForPosition.size() > 0;
+        return ! unconnectedPairsForPosition.isEmpty();
     }
 
     public void addSameLayerPair(final OrderedCanvasIdPair sameLayerPair) {
@@ -119,7 +120,7 @@ public class MFOVPositionPairMatchData
 
         final List<CanvasMatches> derivedMatchesList = new ArrayList<>();
 
-        if (unconnectedPairsForPosition.size() > 0) {
+        if (! unconnectedPairsForPosition.isEmpty()) {
 
             // if same layer matching is requested, first try to patch with same layer matches
             final Set<OrderedCanvasIdPair> unconnectedPairsWithSameLayerSubstitute;
@@ -227,8 +228,8 @@ public class MFOVPositionPairMatchData
                 // AffineModel2D existingMatchModel = new AffineModel2D();
                 // RigidModel2D existingMatchModel = new RigidModel2D();
                 final TranslationModel2D existingMatchModel = new TranslationModel2D();
-                Utilities.fitModelAndLogStats(existingMatchModel,
-                                              canvasMatches,
+                MultiSemUtilities.fitModelAndLogStats(existingMatchModel,
+                                                      canvasMatches,
                                               "existing pair " + pair);
 
                 final TileSpec pTileSpec = idToTileSpec.get(p.getId());
@@ -251,7 +252,7 @@ public class MFOVPositionPairMatchData
         // TODO: compute errors and display?
         final AffineModel2D existingCornerMatchModel = new AffineModel2D();
         try {
-            Utilities.fitModelAndLogStats(existingCornerMatchModel, existingCornerMatchList, "corner matches");
+            MultiSemUtilities.fitModelAndLogStats(existingCornerMatchModel, existingCornerMatchList, "corner matches");
         } catch (final Exception e) {
             throw new IOException("failed to fit model for corner matches", e);
         }
@@ -268,11 +269,11 @@ public class MFOVPositionPairMatchData
                 // Note: derivedMatchWeight is included in missingCornerMatchList PointMatch constructor (above)
                 //       and then saved with converted canvas matches here
                 derivedMatchesList.add(
-                        Utilities.buildPointMatches(pair,
-                                                    Utilities.getMatchingTransformedCornersForTile(pTileSpec, cornerMargin),
-                                                    Utilities.getMatchingTransformedCornersForTile(qTileSpec, cornerMargin),
-                                                    existingCornerMatchModel,
-                                                    derivedMatchWeight));
+                        MultiSemUtilities.buildPointMatches(pair,
+                                                            MultiSemUtilities.getMatchingTransformedCornersForTile(pTileSpec, cornerMargin),
+                                                            MultiSemUtilities.getMatchingTransformedCornersForTile(qTileSpec, cornerMargin),
+                                                            existingCornerMatchModel,
+                                                            derivedMatchWeight));
                 addedPairCount++;
             }
         }

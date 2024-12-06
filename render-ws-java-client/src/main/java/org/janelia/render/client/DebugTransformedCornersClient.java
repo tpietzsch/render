@@ -98,7 +98,7 @@ public class DebugTransformedCornersClient {
         }
 
         public boolean hasTileIds() {
-            return (tileIds != null) && (tileIds.size() > 0);
+            return (tileIds != null) && (! tileIds.isEmpty());
         }
     }
 
@@ -154,7 +154,7 @@ public class DebugTransformedCornersClient {
                                                         parameters.layerRange.minZ,
                                                         parameters.layerRange.maxZ,
                                                         explicitZValues);
-        if (this.zValues.size() == 0) {
+        if (this.zValues.isEmpty()) {
             throw new IllegalArgumentException(
                     "stack " + firstStackName + " does not contain any layers with the specified z values, " +
                     "confirm --minZ and --maxZ are correct");
@@ -262,6 +262,7 @@ public class DebugTransformedCornersClient {
                                                                    null,
                                                                    false,
                                                                    false,
+                                                                   false,
                                                                    false);
 
             neighborPairs.addAll(currentNeighborPairs);
@@ -271,7 +272,7 @@ public class DebugTransformedCornersClient {
         final List<Point> pTransformedCornersAll = new ArrayList<>();
         final List<Point> qTransformedCornersAll = new ArrayList<>();
         
-        if (neighborPairs.size() > 0) {
+        if (! neighborPairs.isEmpty()) {
             final Map<Double, ResolvedTileSpecCollection> zToTilesMap = new HashMap<>(zValues.size());
             for (final Double zVal : zValues) {
                 zToTilesMap.put(zVal, renderDataClient.getResolvedTiles(stackName, zVal));
@@ -329,8 +330,9 @@ public class DebugTransformedCornersClient {
                     			}
                     			//System.out.println( model + ", " + model.getClass().getSimpleName());
                     			//System.exit( 0 );
-                    		} catch (NotEnoughDataPointsException | IllDefinedDataPointsException e) {
-                    			e.printStackTrace();
+                    		} catch (final NotEnoughDataPointsException | IllDefinedDataPointsException e) {
+                                //noinspection CallToPrintStackTrace
+                                e.printStackTrace();
                     		}
                         }
 
@@ -366,14 +368,15 @@ public class DebugTransformedCornersClient {
     }
 
     // e.g. "[1.0, 0.0, 957.4067568339881], [0.0, 1.0, -1640.2727272727273]"
-    public static AffineModel2D stringToModel( String modelString )
+    @SuppressWarnings("unused")
+    public static AffineModel2D stringToModel(String modelString )
     {
     	modelString = modelString.replace("[", "" );
     	modelString = modelString.replace("]", "" );
     	modelString = modelString.replace(" ", "" );
     	modelString = modelString.trim();
 
-    	String[] s = modelString.split( "," );
+    	final String[] s = modelString.split( "," );
 
     	final AffineModel2D model = new AffineModel2D();
         model.set(Double.parseDouble(s[0]), Double.parseDouble(s[1]), Double.parseDouble(s[3]), Double.parseDouble(s[4]), Double.parseDouble(s[2]), Double.parseDouble(s[5]));
@@ -417,9 +420,10 @@ public class DebugTransformedCornersClient {
 			model.setCost( error );
 			System.out.println( "maxE=" + maxError + " " + model + ", " + model.getClass().getSimpleName());
 
-		} catch (NotEnoughDataPointsException | IllDefinedDataPointsException e) {
+		} catch (final NotEnoughDataPointsException | IllDefinedDataPointsException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+            //noinspection CallToPrintStackTrace
+            e.printStackTrace();
 		}
     	
     }

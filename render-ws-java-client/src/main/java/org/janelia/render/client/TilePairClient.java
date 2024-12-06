@@ -392,7 +392,8 @@ public class TilePairClient {
                                                                    tpdp.explicitRadius,
                                                                    tpdp.excludeCornerNeighbors,
                                                                    tpdp.excludeSameLayerNeighbors,
-                                                                   tpdp.excludeSameSectionNeighbors);
+                                                                   tpdp.excludeSameSectionNeighbors,
+                                                                   tpdp.excludeSameMfovNeighbors);
 
             if (tpdp.excludeSameLayerPairsWithPosition != null) {
                 final MontageRelativePosition excludedPosition = tpdp.excludeSameLayerPairsWithPosition;

@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 import org.janelia.alignment.match.CanvasMatches;
 import org.janelia.alignment.match.MatchCollectionId;
 import org.janelia.alignment.multisem.LayerMFOV;
+import org.janelia.alignment.multisem.MultiSemUtilities;
 import org.janelia.alignment.multisem.OrderedMFOVPair;
 import org.janelia.alignment.multisem.UnconnectedMFOVPairsForStack;
 import org.janelia.alignment.spec.stack.StackId;
@@ -182,7 +183,7 @@ public class UnconnectedCrossMFOVClient {
         final String pGroupId = String.valueOf(pZ);
         final String qGroupId = String.valueOf(qZ);
 
-        final List<String> mFOVNames = Utilities.getMFOVNames(renderDataClient, stack, pZ);
+        final List<String> mFOVNames = MultiProjectParameters.getMFOVNames(renderDataClient, stack, pZ);
 
         final Map<String, Integer> mFOVToSFOVPairCount = new HashMap<>();
         mFOVNames.forEach(name -> mFOVToSFOVPairCount.put(name, 0));
@@ -193,8 +194,8 @@ public class UnconnectedCrossMFOVClient {
         for (final CanvasMatches canvasMatches : matchClient.getMatchesBetweenGroups(pGroupId,
                                                                                      qGroupId,
                                                                                      true)) {
-            final String pMFOVName = Utilities.getMFOVForTileId(canvasMatches.getpId());
-            final String qMFOVName = Utilities.getMFOVForTileId(canvasMatches.getqId());
+            final String pMFOVName = MultiSemUtilities.getMFOVForTileId(canvasMatches.getpId());
+            final String qMFOVName = MultiSemUtilities.getMFOVForTileId(canvasMatches.getqId());
             final Integer sFOVPairCount = mFOVToSFOVPairCount.get(pMFOVName);
             if ((sFOVPairCount != null) && (pMFOVName.equals(qMFOVName))) {
                 mFOVToSFOVPairCount.put(pMFOVName, sFOVPairCount + 1);

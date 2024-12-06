@@ -16,6 +16,7 @@ import org.janelia.alignment.match.CanvasMatches;
 import org.janelia.alignment.match.MatchCollectionId;
 import org.janelia.alignment.match.ModelType;
 import org.janelia.alignment.multisem.LayerMFOV;
+import org.janelia.alignment.multisem.MultiSemUtilities;
 import org.janelia.alignment.multisem.UnconnectedMFOVPairsForStack;
 import org.janelia.alignment.spec.ResolvedTileSpecCollection;
 import org.janelia.alignment.spec.TileSpec;
@@ -92,7 +93,7 @@ public class MFOVMontageSolverClient {
     }
 
     public void loadAndSolveUnconnectedMFOVs(final Parameters parameters) throws IOException {
-        if (parameters.unconnectedMFOVPairsFiles.size() > 0) {
+        if (! parameters.unconnectedMFOVPairsFiles.isEmpty()) {
 
             final ArrayList<UnconnectedMFOVPairsForStack> unconnectedMFOVsForAllStacks =
                     new ArrayList<>(
@@ -161,7 +162,7 @@ public class MFOVMontageSolverClient {
             final Set<String> tileIdsToKeep = resolvedTiles.getTileSpecs()
                     .stream()
                     .map(TileSpec::getTileId)
-                    .filter(id -> mFOVSet.contains(Utilities.getMFOVForTileId(id)))
+                    .filter(id -> mFOVSet.contains(MultiSemUtilities.getMFOVForTileId(id)))
                     .collect(Collectors.toSet());
             resolvedTiles.retainTileSpecs(tileIdsToKeep);
             resolvedTiles.resolveTileSpecs();
@@ -215,8 +216,8 @@ public class MFOVMontageSolverClient {
             final String pId = match.getpId();
             final String qId = match.getqId();
 
-            final String pMFOV = Utilities.getMFOVForTileId(pId);
-            final String qMFOV = Utilities.getMFOVForTileId(qId);
+            final String pMFOV = MultiSemUtilities.getMFOVForTileId(pId);
+            final String qMFOV = MultiSemUtilities.getMFOVForTileId(qId);
 
             if (pMFOV.equals(qMFOV) && mFOVSet.contains(pMFOV)) {
 
@@ -311,7 +312,7 @@ public class MFOVMontageSolverClient {
             if (tile == null) {
                 throw new IOException("Tile " + tileId + " was dropped because " + matchCollection +
                                       " does not contain matches for it with any other tiles in MFOV " +
-                                      Utilities.getMFOVForTileId(tileId) +
+                                      MultiSemUtilities.getMFOVForTileId(tileId) +
                                       ".  Make sure montage match patching has been run for " +
                                       matchCollection + " (or specify a different collection).");
             }

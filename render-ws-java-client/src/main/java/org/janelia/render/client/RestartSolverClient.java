@@ -11,7 +11,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang.math.DoubleRange;
@@ -237,7 +236,7 @@ public class RestartSolverClient<B extends Model< B > & Affine2D< B >> {
     }
 
     private void run()
-            throws IOException, ExecutionException, InterruptedException {
+            throws IOException {
 
         LOG.info("run: entry");
 
@@ -333,6 +332,7 @@ public class RestartSolverClient<B extends Model< B > & Affine2D< B >> {
                                                   null,
                                                   true,
                                                   false,
+                                                  false,
                                                   false);
             sameLayerPairs.addAll(pairs);
         });
@@ -372,6 +372,7 @@ public class RestartSolverClient<B extends Model< B > & Affine2D< B >> {
                                                          toBoundsList,
                                                          false,
                                                          true,
+                                                         false,
                                                          false));
             }
             fromZ = consistentLayerRange.getMaximumDouble();
@@ -453,8 +454,7 @@ public class RestartSolverClient<B extends Model< B > & Affine2D< B >> {
                               final ResolvedTileSpecCollection restartTileSpecCollection,
                               final Map<Double, TileBoundsRTree> zToTileBounds,
                               final List<DoubleRange> consistentLayerRanges,
-                              final Map<OrderedCanvasIdPair, CanvasMatches> pairToMatchesMap)
-            throws ExecutionException, InterruptedException {
+                              final Map<OrderedCanvasIdPair, CanvasMatches> pairToMatchesMap) {
 
         final DoubleRange currentRange = consistentLayerRanges.get(nextRangeIndex - 1);
         final DoubleRange nextRange = consistentLayerRanges.get(nextRangeIndex);
