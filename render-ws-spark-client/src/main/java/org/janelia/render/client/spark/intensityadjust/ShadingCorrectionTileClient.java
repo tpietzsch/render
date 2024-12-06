@@ -13,8 +13,8 @@ import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.broadcast.Broadcast;
 import org.janelia.alignment.filter.FilterSpec;
 import org.janelia.alignment.filter.ShadingCorrectionFilter;
+import org.janelia.alignment.spec.Bounds;
 import org.janelia.alignment.spec.ResolvedTileSpecCollection;
-import org.janelia.alignment.spec.SectionData;
 import org.janelia.alignment.spec.TileSpec;
 import org.janelia.alignment.spec.stack.StackMetaData;
 import org.janelia.render.client.ClientRunner;
@@ -38,8 +38,8 @@ import java.util.stream.IntStream;
 /**
  * Spark client for shading correction by a layer-wise quadratic or fourth order model.
  * The client takes as input a render stack and a parameter file and creates a new stack with appropriate shading
- * correction filters. The shading is assumed to be an artifact in the imaging space, so it is applied by finding
- * the position of a tile within the z-layer.
+ * correction filters. The shading is assumed to be an artifact in the global space, so it is applied in the bounds of
+ * the stack.
  * </p>
  * The parameter file is a json file containing a list of z values and corresponding models. The model for each z value
  * is valid for all z layers starting at the given z value until the next z value in the list.
@@ -125,12 +125,12 @@ public class ShadingCorrectionTileClient implements Serializable {
         setUpTargetStack(renderClient);
 
         final List<Double> zValues = renderClient.getStackZValues(parameters.stack);
-        final List<SectionData> stackSectionData = renderClient.getStackSectionData(parameters.stack, null, null);
+        final Bounds stackBounds = renderClient.getStackMetaData(parameters.stack).getStackBounds();
 
         // parallelize computation over z-layers (broadcasting some data that is needed for all tile specs)
         final Broadcast<ShadingModelProvider> modelProviderBroadcast = sparkContext.broadcast(modelProvider);
         final Broadcast<Parameters> parametersBroadcast = sparkContext.broadcast(parameters);
-        final Broadcast<List<SectionData>> sectionDataBroadcast = sparkContext.broadcast(stackSectionData);
+        final Broadcast<Bounds> stackBoundsBroadcast = sparkContext.broadcast(stackBounds);
         final Broadcast<List<Double>> zValuesBroadcast = sparkContext.broadcast(zValues);
 
         final List<Integer> zIndices = IntStream.range(0, zValues.size()).boxed().collect(Collectors.toList());
@@ -138,8 +138,7 @@ public class ShadingCorrectionTileClient implements Serializable {
                 .foreach(zIndex -> {
                     final Double z = zValuesBroadcast.getValue().get(zIndex);
                     final ShadingModel layerModel = modelProviderBroadcast.getValue().getModel(z.intValue());
-                    final SectionData layerSectionData = sectionDataBroadcast.getValue().get(zIndex);
-                    addShadingCorrectionToLayer(z, layerModel, parametersBroadcast.value(), layerSectionData);
+                    addShadingCorrectionToLayer(z, layerModel, parametersBroadcast.value(), stackBoundsBroadcast.value());
                 });
 
         completeTargetStack(renderClient);
@@ -162,7 +161,7 @@ public class ShadingCorrectionTileClient implements Serializable {
             final Double z,
             final ShadingModel layerModel,
             final Parameters parameters,
-            final SectionData layerSectionData
+            final Bounds bounds
     ) throws IOException {
 
         final RenderDataClient renderClient = parameters.webservice.getDataClient();
@@ -175,7 +174,7 @@ public class ShadingCorrectionTileClient implements Serializable {
             LOG.info("Adding shading correction for {} tile specs, z={}", tileSpecs.size(), z);
 
             for (final TileSpec tileSpec : tileSpecs) {
-                addShadingCorrectionToTileSpec(tileSpec, layerModel, layerSectionData);
+                addShadingCorrectionToTileSpec(tileSpec, layerModel, bounds);
             }
         }
 
@@ -185,14 +184,14 @@ public class ShadingCorrectionTileClient implements Serializable {
     private void addShadingCorrectionToTileSpec(
         final TileSpec tileSpec,
         final ShadingModel layerModel,
-        final SectionData sectionData
+        final Bounds bounds
     ) {
 		// get uniform grid of points in tile
         final int nSamples = (int) Math.ceil(Math.sqrt(layerModel.getMinNumMatches()));
         final List<double[]> points = uniformGrid(nSamples);
 
-        final double centerX = sectionData.getMinX() + 0.5 * sectionData.getWidth();
-        final double centerY = sectionData.getMinY() + 0.5 * sectionData.getHeight();
+        final double centerX = bounds.getMinX() + 0.5 * bounds.getWidth();
+        final double centerY = bounds.getMinY() + 0.5 * bounds.getHeight();
 
         final CoordinateTransformList<CoordinateTransform> transforms = tileSpec.getTransformList();
         final List<PointMatch> matches = new ArrayList<>();
@@ -207,8 +206,8 @@ public class ShadingCorrectionTileClient implements Serializable {
             transforms.applyInPlace(transformedPoint);
 
             // transform global coordinate to [-1, 1] x [-1, 1] wrt to the layer bounds
-            transformedPoint[0] = (transformedPoint[0] - centerX) / (sectionData.getWidth() / 2.0);
-            transformedPoint[1] = (transformedPoint[1] - centerY) / (sectionData.getHeight() / 2.0);
+            transformedPoint[0] = (transformedPoint[0] - centerX) / (bounds.getWidth() / 2.0);
+            transformedPoint[1] = (transformedPoint[1] - centerY) / (bounds.getHeight() / 2.0);
 
             // scale coordinates to [-1, 1] to evaluate the global model
             layerModel.applyInPlace(transformedPoint);
