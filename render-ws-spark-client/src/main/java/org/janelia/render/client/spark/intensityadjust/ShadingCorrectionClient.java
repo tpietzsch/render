@@ -227,7 +227,7 @@ public class ShadingCorrectionClient implements Serializable {
             for (int z = (int) block.min(2); z <= block.max(2); z++) {
                 final ShadingModel model = modelProvider.getModel(z);
                 if (model == null) {
-                    LOG.warn("No model found for z={}", z);
+                    // no model for this z value
                     continue;
                 }
 
@@ -274,7 +274,7 @@ public class ShadingCorrectionClient implements Serializable {
                     return modelSpec.getModel();
                 }
             }
-            return null;
+            throw new IllegalArgumentException("No model found for z=" + z);
         }
 
         public static ShadingModelProvider fromJsonFile(final String fileName) throws IOException {
@@ -285,6 +285,10 @@ public class ShadingCorrectionClient implements Serializable {
             }
         }
 
+        /**
+         * Provide a {@link ShadingModel} for a given z value. If no model is found for the given z value, the provider
+         * returns null.
+         */
         public static ShadingModelProvider fromJson(final JsonNode jsonData) throws JsonProcessingException {
 
             final ObjectMapper mapper = new ObjectMapper();
@@ -320,13 +324,16 @@ public class ShadingCorrectionClient implements Serializable {
             }
 
             public ShadingModel getModel() {
-                if (modelType.equals("quadratic")) {
-                    return new QuadraticShading(coefficients);
-                } else if (modelType.equals("fourthOrder")) {
-                    return new FourthOrderShading(coefficients);
-                } else {
-                    throw new IllegalArgumentException("Unknown model type: " + modelType);
-                }
+				switch (modelType) {
+					case "quadratic":
+						return new QuadraticShading(coefficients);
+					case "fourthOrder":
+						return new FourthOrderShading(coefficients);
+					case "none":
+						return null;
+					default:
+						throw new IllegalArgumentException("Unknown model type: " + modelType);
+				}
             }
 
             public String toString() {

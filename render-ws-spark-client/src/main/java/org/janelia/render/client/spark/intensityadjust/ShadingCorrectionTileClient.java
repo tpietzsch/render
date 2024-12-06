@@ -171,7 +171,7 @@ public class ShadingCorrectionTileClient implements Serializable {
         final ResolvedTileSpecCollection rtsc = renderClient.getResolvedTiles(parameters.stack, z);
 
         if (layerModel == null) {
-            LOG.warn("No model found");
+            LOG.info("No shading correction");
         } else {
             final Collection<TileSpec> tileSpecs = rtsc.getTileSpecs();
             LOG.info("Adding shading correction for {} tile specs", tileSpecs.size());
