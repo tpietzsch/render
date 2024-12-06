@@ -21,6 +21,7 @@ import org.janelia.alignment.filter.emshading.FourthOrderShading;
 import org.janelia.alignment.filter.emshading.QuadraticShading;
 import org.janelia.render.client.emshading.ShadingCorrection_Plugin;
 import org.janelia.render.client.parameter.CommandLineParameters;
+import org.janelia.render.client.spark.LogUtilities;
 import org.janelia.saalfeldlab.n5.DatasetAttributes;
 import org.janelia.saalfeldlab.n5.N5FSReader;
 import org.janelia.saalfeldlab.n5.N5FSWriter;
@@ -202,7 +203,10 @@ public class ShadingCorrectionClient implements Serializable {
     }
 
     private static void processSingleBlock(final Parameters parameters, final ShadingModelProvider modelProvider, final Grid.Block block) {
-        LOG.info("processSingleBlock: block={}", block.gridPosition);
+        // enable logging on executors and add block context to log messages
+        LogUtilities.setupExecutorLog4j(block.gridPosition[0] + ":" + block.gridPosition[1] + ":" + block.gridPosition[2]);
+
+        LOG.info("processSingleBlock: entry");
 
         try (final N5Reader in = new N5FSReader(parameters.n5In);
              final N5Writer out = new N5FSWriter(parameters.n5Out)) {

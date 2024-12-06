@@ -23,6 +23,7 @@ import org.janelia.alignment.filter.emshading.ShadingModel;
 import org.janelia.render.client.emshading.ShadingCorrection_Plugin;
 import org.janelia.render.client.parameter.CommandLineParameters;
 import org.janelia.render.client.parameter.RenderWebServiceParameters;
+import org.janelia.render.client.spark.LogUtilities;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.janelia.render.client.spark.intensityadjust.ShadingCorrectionClient.ShadingModelProvider;
@@ -163,15 +164,17 @@ public class ShadingCorrectionTileClient implements Serializable {
             final Parameters parameters,
             final Bounds bounds
     ) throws IOException {
+        // enable logging on executors and add z-layer to log messages
+        LogUtilities.setupExecutorLog4j("z=" + z.intValue());
 
         final RenderDataClient renderClient = parameters.webservice.getDataClient();
         final ResolvedTileSpecCollection rtsc = renderClient.getResolvedTiles(parameters.stack, z);
 
         if (layerModel == null) {
-            LOG.warn("No model found for z={}", z);
+            LOG.warn("No model found");
         } else {
             final Collection<TileSpec> tileSpecs = rtsc.getTileSpecs();
-            LOG.info("Adding shading correction for {} tile specs, z={}", tileSpecs.size(), z);
+            LOG.info("Adding shading correction for {} tile specs", tileSpecs.size());
 
             for (final TileSpec tileSpec : tileSpecs) {
                 addShadingCorrectionToTileSpec(tileSpec, layerModel, bounds);
