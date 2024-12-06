@@ -227,7 +227,7 @@ public class ShadingCorrectionTileClient implements Serializable {
 
         // convert to filter and add to tile spec
         final ShadingCorrectionFilter filter = new ShadingCorrectionFilter(tileModel);
-        tileSpec.setFilterSpec(FilterSpec.forFilter(filter));
+        tileSpec.addFilterSpec(FilterSpec.forFilter(filter));
     }
 
     final List<double[]> uniformGrid(final int n) {
