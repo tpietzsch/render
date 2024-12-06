@@ -1,9 +1,10 @@
 package org.janelia.render.client.spark.intensityadjust;
 
 import com.beust.jcommander.Parameter;
-import com.google.gson.Gson;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import net.imglib2.Cursor;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.Img;
@@ -278,15 +279,16 @@ public class ShadingCorrectionClient implements Serializable {
 
         public static ShadingModelProvider fromJsonFile(final String fileName) throws IOException {
             LOG.info("Reading model specs from file: {}", fileName);
+            final ObjectMapper mapper = new ObjectMapper();
             try (final FileReader reader = new FileReader(fileName)) {
-                return fromJson(JsonParser.parseReader(reader));
+                return fromJson(mapper.readTree(reader));
             }
         }
 
-        public static ShadingModelProvider fromJson(final JsonElement jsonData) {
+        public static ShadingModelProvider fromJson(final JsonNode jsonData) throws JsonProcessingException {
 
-            final List<ModelSpec> modelSpecs = new ArrayList<>();
-            Collections.addAll(modelSpecs, new Gson().fromJson(jsonData, ModelSpec[].class));
+            final ObjectMapper mapper = new ObjectMapper();
+			final List<ModelSpec> modelSpecs = new ArrayList<>(Arrays.asList(mapper.treeToValue(jsonData, ModelSpec[].class)));
 
             // validation of json data
             for (final ModelSpec modelSpec : modelSpecs) {
@@ -300,8 +302,11 @@ public class ShadingCorrectionClient implements Serializable {
 
         @SuppressWarnings("unused")
 		private static class ModelSpec implements Serializable {
+            @JsonProperty("fromZ")
             private int fromZ;
+            @JsonProperty("modelType")
             private String modelType;
+            @JsonProperty("coefficients")
             private double[] coefficients;
 
             // no explicit constructor; meant to be deserialized from json
