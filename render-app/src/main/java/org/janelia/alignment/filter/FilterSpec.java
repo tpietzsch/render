@@ -1,6 +1,7 @@
 package org.janelia.alignment.filter;
 
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.janelia.alignment.json.JsonUtils;
@@ -94,6 +95,33 @@ public class FilterSpec implements Serializable {
      */
     public static FilterSpec forFilter(final Filter filter) {
         return new FilterSpec(filter.getClass().getName(), filter.toParametersMap());
+    }
+
+    public static FilterSpec combine(final FilterSpec first, final FilterSpec second) {
+        if (first == null || second == null) {
+            return first == null ? second : first;
+        }
+
+        final FilterSpec firstAsComposite = asCompositeSpec(first);
+        final FilterSpec secondAsComposite = asCompositeSpec(second);
+
+        // both are guaranteed to be composite filters -> unpack both, append, and repack
+        final Map<String, String> parameters = new HashMap<>(firstAsComposite.parameters);
+        final int shift = firstAsComposite.parameters.size();
+        for (int i = 0; i < secondAsComposite.parameters.size(); i++) {
+            final String key = CompositeFilter.filterKey(i + shift);
+            final String value = secondAsComposite.parameters.get(CompositeFilter.filterKey(i));
+            parameters.put(key, value);
+        }
+        return new FilterSpec(CompositeFilter.class.getName(), parameters);
+    }
+
+    private static FilterSpec asCompositeSpec(final FilterSpec filterSpec) {
+        if (filterSpec.className.equals(CompositeFilter.class.getName())) {
+            return filterSpec;
+        }
+        return new FilterSpec(CompositeFilter.class.getName(),
+                              Map.of(CompositeFilter.filterKey(0), filterSpec.toJson()));
     }
 
     private Class<?> getClazz() throws IllegalArgumentException {
