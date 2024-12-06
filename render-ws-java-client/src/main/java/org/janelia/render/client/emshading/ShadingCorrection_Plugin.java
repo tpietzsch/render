@@ -9,6 +9,7 @@ import java.util.List;
 import javax.swing.SwingUtilities;
 
 import com.beust.jcommander.Parameter;
+import com.beust.jcommander.ParametersDelegate;
 import ij.ImagePlus;
 import mpicbg.models.IllDefinedDataPointsException;
 import mpicbg.models.NotEnoughDataPointsException;
@@ -22,6 +23,7 @@ import org.janelia.alignment.spec.Bounds;
 import org.janelia.alignment.util.ImageProcessorCache;
 import org.janelia.render.client.RenderDataClient;
 import org.janelia.render.client.parameter.CommandLineParameters;
+import org.janelia.render.client.parameter.RenderWebServiceParameters;
 import org.janelia.render.client.solver.visualize.RenderTools;
 
 import ij.IJ;
@@ -38,15 +40,8 @@ public class ShadingCorrection_Plugin implements PlugIn {
 	public static final int MAX_SIZE = 2000 * 2000;
 
 	private static class Parameters extends CommandLineParameters {
-		@Parameter(names = "--owner",
-				description = "Name of the owner in the render database",
-				required = true)
-		public String owner;
-
-		@Parameter(names = "--project",
-				description = "Name of the render project",
-				required = true)
-		public String project;
+		@ParametersDelegate
+		public RenderWebServiceParameters renderWebService = new RenderWebServiceParameters();
 
 		@Parameter(names = "--stack",
 				description = "Name of the stack in the render project",
@@ -65,7 +60,6 @@ public class ShadingCorrection_Plugin implements PlugIn {
 
 	public static int defaultType = 0;
 	public static boolean defaultShowBackground = false;
-	public static String baseUrl = "http://renderer-dev.int.janelia.org:8080/render-ws/v1";
 	public static String[] fitTypes = new String[] { "Quadratic", "Fourth Order" };
 
 	@Override
@@ -170,7 +164,7 @@ public class ShadingCorrection_Plugin implements PlugIn {
 		new ImageJ();
 		SwingUtilities.invokeLater(ShadingCorrection_Plugin::addKeyListener);
 
-		IJ.log("Opening " + params.owner + "/" + params.project + "/" + params.stack);
+		IJ.log("Opening " + params.renderWebService.owner + "/" + params.renderWebService.project + "/" + params.stack);
 		IJ.log("Showing slice " + params.z);
 
 		final ImagePlus img = renderImage(params);
@@ -178,7 +172,7 @@ public class ShadingCorrection_Plugin implements PlugIn {
 	}
 
 	private static ImagePlus renderImage(final Parameters params) throws IOException {
-		final RenderDataClient client = new RenderDataClient(baseUrl, params.owner, params.project);
+		final RenderDataClient client = params.renderWebService.getDataClient();
 		final Bounds stackBounds = client.getStackMetaData(params.stack).getStackBounds();
 		final long x = stackBounds.getMinX().longValue();
 		final long y = stackBounds.getMinY().longValue();
@@ -198,11 +192,14 @@ public class ShadingCorrection_Plugin implements PlugIn {
 		}
 
 		final ImageProcessorWithMasks ipwm = RenderTools.renderImage(ImageProcessorCache.DISABLED_CACHE,
-																	 baseUrl, params.owner, params.project, params.stack,
+																	 params.renderWebService.baseDataUrl,
+																	 params.renderWebService.owner,
+																	 params.renderWebService.project,
+																	 params.stack,
 																	 x, y, params.z, w, h,
 																	 params.scale, false);
 
-		final String title = params.project + "-" + params.stack + "(z=" + params.z + ")";
+		final String title = params.renderWebService.project + "-" + params.stack + "(z=" + params.z + ")";
 		return new ImagePlus(title, ipwm.ip);
 	}
 }
