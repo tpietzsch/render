@@ -1,5 +1,6 @@
 package org.janelia.alignment.filter;
 
+import org.janelia.alignment.filter.emshading.QuadraticShading;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -75,4 +76,31 @@ public class FilterSpecTest {
         return parsedSpec.buildInstance();
     }
 
+    @SuppressWarnings("DataFlowIssue")
+    @Test
+    public void compositeFilterSpecBuildsCorrectly() {
+        FilterSpec first = getTestFilterSpec(1);
+        FilterSpec second = getTestFilterSpec(2);
+
+        // combine filters in all possible ways
+        first = FilterSpec.combine(first, null);
+        second = FilterSpec.combine(null, second);
+
+        FilterSpec accumulate = FilterSpec.combine(first, second);
+
+        accumulate = FilterSpec.combine(first, accumulate);
+        accumulate = FilterSpec.combine(accumulate, second);
+
+        accumulate = FilterSpec.combine(accumulate, accumulate);
+
+        // check if it can be built and has the correct number of parameters
+        final Filter recoveredFilter = accumulate.buildInstance();
+        Assert.assertEquals(8, recoveredFilter.toParametersMap().size());
+    }
+
+    private static FilterSpec getTestFilterSpec(final int i) {
+        final QuadraticShading quadraticShading = new QuadraticShading(new double[]{i, 0, 0, 0, 0, 0});
+        final Filter filter = new ShadingCorrectionFilter(quadraticShading);
+        return FilterSpec.forFilter(filter);
+    }
 }
