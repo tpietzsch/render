@@ -2,12 +2,6 @@ package org.janelia.render.client.multisem;
 
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParametersDelegate;
-
-import java.io.File;
-import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 import org.janelia.alignment.ImageAndMask;
 import org.janelia.alignment.spec.ChannelSpec;
 import org.janelia.alignment.spec.ResolvedTileSpecCollection;
@@ -20,16 +14,19 @@ import org.janelia.render.client.parameter.RenderWebServiceParameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 /**
  * Java client to copy a stack's tiles, changing the image URL paths for all tiles in the resulting stack.
  * In this case, the image URLs are changed to point to images that have been contrast-adjusted using the Hayworth
  * pipeline.
- *
- * @author Eric Trautman
  */
-public class HackImageUrlPathClient {
+public class BackgroundCorrectedImageUrlClient {
 
-    @SuppressWarnings("ALL")
     public static class Parameters extends CommandLineParameters {
 
         @ParametersDelegate
@@ -60,7 +57,7 @@ public class HackImageUrlPathClient {
 
                 LOG.info("runClient: entry, parameters={}", parameters);
 
-                final HackImageUrlPathClient client = new HackImageUrlPathClient(parameters);
+                final BackgroundCorrectedImageUrlClient client = new BackgroundCorrectedImageUrlClient(parameters);
                 client.fixStackData();
             }
         };
@@ -71,7 +68,7 @@ public class HackImageUrlPathClient {
 
     private final RenderDataClient renderDataClient;
 
-    private HackImageUrlPathClient(final Parameters parameters) {
+    private BackgroundCorrectedImageUrlClient(final Parameters parameters) {
         this.parameters = parameters;
         this.renderDataClient = parameters.renderWeb.getDataClient();
     }
@@ -107,36 +104,23 @@ public class HackImageUrlPathClient {
 
                 final ImageAndMask sourceImageAndMask = entry.getValue();
 
-                // file:/nrs/hess/data/hess_wafer_53/raw/imaging/msem/scan_001/wafer_53_scan_001_20220427_23-16-30/402_/000005/402_000005_001_2022-04-28T1457426331720.png
+                // file:/nrs/hess/ibeammsem/system_02/wafers/wafer_60/acquisition/background_corrected/scans/scan_004/slabs/slab_0399/mfovs/mfov_0000/sfov_001.png
                 final String imageUrl = sourceImageAndMask.getImageUrl();
+                final String newUrl = imageUrl.substring(5, 62) + "/background_corrected" + imageUrl.substring(62);
 
-                final Matcher m = PATH_PATTERN.matcher(imageUrl);
-                if (m.matches()) {
-
-                    // file:/nrs/hess/data/hess_wafer_53/msem_with_hayworth_contrast/scan_001/402_/000005/402_000005_001_2022-04-28T1457426331720.png
-                    final File hackFile = new File("/nrs/hess/data/hess_wafer_53/msem_with_hayworth_contrast/" +
-                                                   m.group(1) +  m.group(2));
-                    if (! hackFile.exists()) {
-                        throw new IllegalArgumentException("file does not exist: " + hackFile);
-                    }
-
-                    final ImageAndMask hackedImageAndMask =
-                            sourceImageAndMask.copyWithDerivedUrls("file:" + hackFile.getAbsolutePath(),
-                                                                   sourceImageAndMask.getMaskUrl());
-
-                    channelSpec.putMipmap(zeroLevelKey, hackedImageAndMask);
-
-                } else {
-                    throw new IllegalArgumentException("invalid image URL: " + imageUrl);
+                final File newFile = new File(newUrl);
+                if (! newFile.exists()) {
+                    throw new IllegalArgumentException("file does not exist: " + newFile);
                 }
 
+                final ImageAndMask newImageAndMask =
+                        sourceImageAndMask.copyWithDerivedUrls("file:" + newFile.getAbsolutePath(),
+                                                               sourceImageAndMask.getMaskUrl());
+
+                channelSpec.putMipmap(zeroLevelKey, newImageAndMask);
             }
-
         }
-
     }
 
-    private final Pattern PATH_PATTERN = Pattern.compile("^file:/nrs.*/(scan_\\d\\d\\d/)wafer.*/(\\d\\d\\d_/.*png)$");
-
-    private static final Logger LOG = LoggerFactory.getLogger(HackImageUrlPathClient.class);
+    private static final Logger LOG = LoggerFactory.getLogger(BackgroundCorrectedImageUrlClient.class);
 }
