@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.janelia.alignment.filter.emshading.FourthOrderShading;
+import org.janelia.alignment.filter.emshading.InterpolatedShading;
 import org.janelia.alignment.filter.emshading.QuadraticShading;
 import org.janelia.alignment.filter.emshading.ShadingModel;
 import org.slf4j.Logger;
@@ -15,28 +16,44 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 
 public class ShadingModelProvider implements Serializable {
 	private static final Logger LOG = LoggerFactory.getLogger(ShadingModelProvider.class);
 
 	private final List<ModelSpec> sortedModelSpecs;
+	private final List<Integer> sortedZValues;
 
 	private ShadingModelProvider(final List<ModelSpec> modelSpecs) {
+		if (modelSpecs.isEmpty()) {
+			throw new IllegalArgumentException("No model specs provided");
+		}
 		this.sortedModelSpecs = modelSpecs;
-		this.sortedModelSpecs.sort(Collections.reverseOrder(Comparator.comparingInt(ModelSpec::getZ)));
+		this.sortedModelSpecs.sort(Comparator.comparingInt(ModelSpec::getZ));
+		this.sortedZValues = sortedModelSpecs.stream().map(ModelSpec::getZ).collect(Collectors.toList());
 	}
 
 	public ShadingModel getModel(final int z) {
-		for (final ModelSpec modelSpec : sortedModelSpecs) {
-			if (z >= modelSpec.getZ()) {
-				return modelSpec.getModel();
+		if (z < sortedZValues.get(0)) {
+			// before the first model
+			return sortedModelSpecs.get(0).getModel();
+		}
+
+		for (int i = 1; i < sortedZValues.size(); i++) {
+			if (z > sortedZValues.get(i - 1) && z < sortedZValues.get(i)) {
+				// between two models -> interpolate
+				final ModelSpec modelSpecA = sortedModelSpecs.get(i - 1);
+				final ModelSpec modelSpecB = sortedModelSpecs.get(i);
+				final double t = (z - modelSpecA.getZ()) / (double) (modelSpecB.getZ() - modelSpecA.getZ());
+				return new InterpolatedShading(modelSpecA.getModel(), modelSpecB.getModel(), t);
 			}
 		}
-		throw new IllegalArgumentException("No model found for z=" + z);
+
+		// after the last model
+		return sortedModelSpecs.get(sortedModelSpecs.size() - 1).getModel();
 	}
 
 	public static ShadingModelProvider fromJsonFile(final String fileName) throws IOException {

@@ -13,6 +13,7 @@ import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.broadcast.Broadcast;
 import org.janelia.alignment.filter.FilterSpec;
 import org.janelia.alignment.filter.ShadingCorrectionFilter;
+import org.janelia.alignment.filter.emshading.FourthOrderShading;
 import org.janelia.alignment.spec.Bounds;
 import org.janelia.alignment.spec.ResolvedTileSpecCollection;
 import org.janelia.alignment.spec.TileSpec;
@@ -189,8 +190,11 @@ public class ShadingCorrectionTileClient implements Serializable {
         final ShadingModel layerModel,
         final Bounds bounds
     ) {
+        // create a new shading model for the tile (use fourth order as the greatest common multiple of quadratic and fourth order)
+        final ShadingModel tileModel = new FourthOrderShading();
+
 		// get uniform grid of points in tile
-        final int nSamples = (int) Math.ceil(Math.sqrt(layerModel.getMinNumMatches()));
+        final int nSamples = (int) Math.ceil(Math.sqrt(tileModel.getMinNumMatches()));
         final List<double[]> points = uniformGrid(nSamples);
 
         final double centerX = bounds.getMinX() + 0.5 * bounds.getWidth();
@@ -218,7 +222,6 @@ public class ShadingCorrectionTileClient implements Serializable {
             matches.add(new PointMatch(new Point(tilePointNormalized), new Point(value)));
         }
 
-        final ShadingModel tileModel = layerModel.copy();
 		try {
 			tileModel.fit(matches);
 		} catch (final NotEnoughDataPointsException | IllDefinedDataPointsException e) {
