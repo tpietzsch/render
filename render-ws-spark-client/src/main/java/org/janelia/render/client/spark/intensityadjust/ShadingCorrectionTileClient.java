@@ -26,7 +26,7 @@ import org.janelia.render.client.parameter.RenderWebServiceParameters;
 import org.janelia.render.client.spark.LogUtilities;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.janelia.render.client.spark.intensityadjust.ShadingCorrectionClient.ShadingModelProvider;
+import org.janelia.render.client.emshading.ShadingModelProvider;
 
 import java.io.IOException;
 import java.io.Serializable;
