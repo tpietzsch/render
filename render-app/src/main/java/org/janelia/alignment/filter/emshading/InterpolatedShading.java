@@ -33,7 +33,6 @@ public class InterpolatedShading extends ShadingModel {
 	 * @param t the interpolation parameter in [0, 1] so that the result is A * t + B * (1 - t)
 	 */
 	public InterpolatedShading(final ShadingModel modelA, final ShadingModel modelB, final double t) {
-		super();
 		this.modelA = modelA;
 		this.modelB = modelB;
 		this.bufferA = new double[nCoefficients()];
@@ -58,6 +57,10 @@ public class InterpolatedShading extends ShadingModel {
 
 	@Override
 	protected int nCoefficients() {
+		if (modelA == null || modelB == null) {
+			// this prevents the superclass constructor from throwing an exception
+			return 0;
+		}
 		return Math.max(modelA.nCoefficients(), modelB.nCoefficients());
 	}
 

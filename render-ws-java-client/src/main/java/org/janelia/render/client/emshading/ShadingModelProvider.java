@@ -43,7 +43,7 @@ public class ShadingModelProvider implements Serializable {
 		}
 
 		for (int i = 1; i < sortedZValues.size(); i++) {
-			if (z > sortedZValues.get(i - 1) && z < sortedZValues.get(i)) {
+			if (z >= sortedZValues.get(i - 1) && z < sortedZValues.get(i)) {
 				// between two models -> interpolate
 				final ModelSpec modelSpecA = sortedModelSpecs.get(i - 1);
 				final ModelSpec modelSpecB = sortedModelSpecs.get(i);
