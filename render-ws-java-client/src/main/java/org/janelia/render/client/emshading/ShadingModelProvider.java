@@ -58,8 +58,12 @@ public class ShadingModelProvider implements Serializable {
 
 		// validation of json data
 		for (final ModelSpec modelSpec : modelSpecs) {
-			LOG.info("Found model spec: {}", modelSpec);
+			LOG.debug("Found model spec: {}", modelSpec);
 			final ShadingModel ignored = modelSpec.getModel();
+		}
+
+		if (modelSpecs.isEmpty()) {
+			throw new IllegalArgumentException("No model specs found in json data");
 		}
 
 		return new ShadingModelProvider(modelSpecs);
@@ -68,8 +72,8 @@ public class ShadingModelProvider implements Serializable {
 
 	@SuppressWarnings("unused")
 	private static class ModelSpec implements Serializable {
-		@JsonProperty("fromZ")
-		private int fromZ;
+		@JsonProperty("z")
+		private int z;
 		@JsonProperty("modelType")
 		private String modelType;
 		@JsonProperty("coefficients")
@@ -78,7 +82,7 @@ public class ShadingModelProvider implements Serializable {
 		// no explicit constructor; meant to be deserialized from json
 
 		public int getZ() {
-			return fromZ;
+			return z;
 		}
 
 		public void setCoefficients(final double[] coefficients) {
@@ -99,7 +103,7 @@ public class ShadingModelProvider implements Serializable {
 		}
 
 		public String toString() {
-			return "ModelSpec{fromZ=" + fromZ + ", modelType=" + modelType + ", coefficients=" + Arrays.toString(coefficients) + "}";
+			return "ModelSpec{z=" + z + ", modelType=" + modelType + ", coefficients=" + Arrays.toString(coefficients) + "}";
 		}
 	}
 }
