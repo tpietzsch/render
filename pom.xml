@@ -141,6 +141,9 @@
         -->
         <n5-version>3.2.0</n5-version>
 
+        <imglib2.version>7.1.4</imglib2.version>
+        <imglib2-algorithm.version>0.17.2</imglib2-algorithm.version>
+
         <jackson-version>2.14.3</jackson-version> <!-- NOTE: 2.15.3 causes NullPointerException in maven enforcer plugin -->
 
         <swagger-version>1.6.2</swagger-version>
