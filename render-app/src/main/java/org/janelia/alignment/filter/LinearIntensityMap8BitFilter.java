@@ -68,7 +68,18 @@ public class LinearIntensityMap8BitFilter
         if (ip instanceof ByteProcessor) {
             final byte[] pixels = (byte[]) ip.getPixels();
             final Img<UnsignedByteType> img = ArrayImgs.unsignedBytes(pixels, ip.getWidth(), ip.getHeight());
-            final Coefficients c = new Coefficients(coefficients, numberOfRegionColumns, numberOfRegionRows );
+
+            /* coefficients mapping into existing [min, max] */
+            final double min = 0;
+            final double max = 255;
+            final Coefficients.CoefficientFunction fn = (coefficientIndex, flattenedFieldIndex) -> {
+                final double[] ab = coefficients[flattenedFieldIndex];
+                return coefficientIndex == 0
+                        ? ab[0]
+                        : ((max - min) * ab[1] + min - ab[0] * min);
+            };
+
+            final Coefficients c = new Coefficients(fn, 2, numberOfRegionColumns, numberOfRegionRows );
             BlockSupplier.of(img)
                     .andThen(linearIntensityMap(c, img))
                     .tile(256)

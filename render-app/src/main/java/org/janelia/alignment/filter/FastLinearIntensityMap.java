@@ -31,20 +31,36 @@ class FastLinearIntensityMap {
 
         final int[] size;
         final int[] strides;
+
+        /**
+         * {@code flattenedCoefficients[i]} holds the flattened array of the i-the coefficient.
+         * That is, for linear map {@code y=a*x+b}, {@code flattenedCoefficients[0]} holds all the {@code a}s and
+         * {@code flattenedCoefficients[1]} holds all the {@code b}s.
+         */
         final float[][] flattenedCoefficients;
 
         public Coefficients(
                 final double[][] coefficients,
                 final int... fieldDimensions) {
+            this((c, f) -> coefficients[f][c], coefficients[0].length, fieldDimensions);
+        }
+
+        @FunctionalInterface
+        public interface CoefficientFunction {
+            double apply(int coefficientIndex, int flattenedFieldIndex);
+        }
+
+        public Coefficients(
+                final CoefficientFunction coefficients,
+                final int numCoefficients,
+                final int... fieldDimensions) {
             final int numElements = safeInt(Intervals.numElements(fieldDimensions));
-            final int numCoefficients = coefficients[0].length;
             size = fieldDimensions.clone();
             strides = IntervalIndexer.createAllocationSteps(size);
             flattenedCoefficients = new float[numCoefficients][numElements];
-            for (int i = 0; i < numElements; ++i) {
-                final double[] c = coefficients[i];
-                for (int j = 0; j < numCoefficients; ++j) {
-                    flattenedCoefficients[j][i] = (float) c[j];
+            for (int j = 0; j < numCoefficients; ++j) {
+                for (int i = 0; i < numElements; ++i) {
+                    flattenedCoefficients[j][i] = (float) coefficients.apply(j, i);
                 }
             }
         }
