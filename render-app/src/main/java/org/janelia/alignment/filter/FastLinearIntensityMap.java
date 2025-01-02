@@ -66,8 +66,6 @@ class FastLinearIntensityMap {
      * Apply an interpolated linear intensity map to blocks of the standard
      * ImgLib2 {@code RealType}s.
      * <p>
-     * Only 2D is supported currently!
-     * <p>
      * The returned factory function creates an operator matching the type a
      * given input {@code BlockSupplier<T>}.
      *
@@ -86,8 +84,6 @@ class FastLinearIntensityMap {
     /**
      * Create a {@code UnaryBlockOperator} to apply an interpolated linear
      * intensity map to blocks of the standard ImgLib2 {@code RealType}s.
-     * <p>
-     * Only 2D is supported currently!
      *
      * @param type            instance of the input type
      * @param coefficients
