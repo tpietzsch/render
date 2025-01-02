@@ -130,7 +130,11 @@ class FastLinearIntensityMap {
             final int n = coefficients.numDimensions();
 
             final double[] scale = new double[n];
-            Arrays.setAll(scale, d -> (double) target.dimension(d) / coefficients.size(d));
+            Arrays.setAll(scale, d -> target.dimension(d) / coefficients.size(d));
+            // TODO: probably a bug!? integer division in floating point context...
+            //       It should be this instead:
+            //           Arrays.setAll(scale, d -> (double) target.dimension(d) / coefficients.size(d));
+            //       but we keep the bug for compatibility for now
 
             // shift everything in xy by 0.5 pixels so the coefficient sits in the middle of the block
             final double[] translation = new double[n];
