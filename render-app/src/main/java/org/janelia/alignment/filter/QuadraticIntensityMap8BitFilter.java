@@ -8,8 +8,8 @@ import ij.process.ImageProcessor;
 
 import net.imglib2.algorithm.blocks.BlockSupplier;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
-import org.janelia.alignment.intensity.FastLinearIntensityMap.Coefficients;
-import org.janelia.alignment.intensity.FastLinearIntensityMap.Coefficients.CoefficientFunction;
+import org.janelia.alignment.intensity.Coefficients;
+import org.janelia.alignment.intensity.Coefficients.CoefficientFunction;
 
 import net.imglib2.img.Img;
 import net.imglib2.img.array.ArrayImgs;

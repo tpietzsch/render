@@ -13,8 +13,6 @@ import net.imglib2.type.PrimitiveType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.Cast;
 import net.imglib2.util.IntervalIndexer;
-import org.janelia.alignment.intensity.FastLinearIntensityMap.Coefficients;
-import org.janelia.alignment.intensity.FastLinearIntensityMap.TransformCoefficients;
 
 import java.util.Arrays;
 import java.util.function.Function;
