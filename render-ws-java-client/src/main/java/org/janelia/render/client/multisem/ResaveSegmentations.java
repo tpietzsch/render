@@ -155,7 +155,7 @@ public class ResaveSegmentations {
 		try {
 			for (int i = 0; i < grid.size(); i++) {
 				completionService.take().get();
-				LOG.info("Processed {} of {} blocks", i + 1, grid.size());
+				LOG.debug("Processed {} of {} blocks", i + 1, grid.size());
 			}
 			executor.shutdown();
 		} catch (final Exception e) {
@@ -252,7 +252,7 @@ public class ResaveSegmentations {
 		while (targetCursor.hasNext()) {
 			final UnsignedLongType pixel = targetCursor.next();
 			targetCursor.localize(currentPoint);
-			final int zInRender = (int) currentPoint[2] + 1;
+			final int zInRender = (int) currentPoint[2];
 			final Integer zInExport = zRenderToExport.get(zInRender);
 			final List<AffineModel2D> layerFromTargetTransforms = fromTargetTransforms.get(zInRender);
 			final List<AffineModel2D> layerToSourceTransforms = toSourceTransforms.get(zInRender);
