@@ -1,4 +1,4 @@
-package org.janelia.alignment.filter;
+package org.janelia.alignment.intensity;
 
 import net.imglib2.Dimensions;
 import net.imglib2.algorithm.blocks.AbstractBlockProcessor;
@@ -22,7 +22,7 @@ import static net.imglib2.type.PrimitiveType.FLOAT;
 import static net.imglib2.util.Util.safeInt;
 
 
-class FastLinearIntensityMap {
+public class FastLinearIntensityMap {
 
     /**
      * Holds flattened coefficient array and dimensions.

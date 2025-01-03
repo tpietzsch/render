@@ -8,9 +8,8 @@ import ij.process.ImageProcessor;
 
 import net.imglib2.algorithm.blocks.BlockSupplier;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
-import org.janelia.alignment.Colored;
-import org.janelia.alignment.filter.FastLinearIntensityMap.Coefficients;
-import org.janelia.alignment.filter.FastLinearIntensityMap.Coefficients.CoefficientFunction;
+import org.janelia.alignment.intensity.FastLinearIntensityMap.Coefficients;
+import org.janelia.alignment.intensity.FastLinearIntensityMap.Coefficients.CoefficientFunction;
 
 import net.imglib2.img.Img;
 import net.imglib2.img.array.ArrayImgs;
@@ -18,7 +17,7 @@ import net.imglib2.img.imageplus.ImagePlusImgs;
 import net.imglib2.type.numeric.real.FloatType;
 import org.janelia.alignment.intensity.QuadraticIntensityMap;
 
-import static org.janelia.alignment.filter.FastQuadraticIntensityMap.quadraticIntensityMap;
+import static org.janelia.alignment.intensity.FastQuadraticIntensityMap.quadraticIntensityMap;
 
 public class QuadraticIntensityMap8BitFilter extends IntensityMap8BitFilter {
 
