@@ -149,8 +149,7 @@ public class KensAlignmentStacksClient {
         final ListTransformSpec transforms = new ListTransformSpec();
 
         // scan correction
-        final TransformSpec firstTransformSpec = tileSpec.getTransforms().getSpec(0);
-        final TransformSpec scanCorrectionSpec = verifyCorrectScanCorrection(firstTransformSpec);
+        final TransformSpec scanCorrectionSpec = extractScanCorrection(tileSpec);
         transforms.addSpec(scanCorrectionSpec);
 
         // concatenate all alignment transforms
@@ -180,8 +179,9 @@ public class KensAlignmentStacksClient {
         tileSpec.setZ((double) realZ);
     }
 
-    // Make sure the correct scan correction transform is the first transform in the list
-    private static TransformSpec verifyCorrectScanCorrection(final TransformSpec firstTransformSpec) {
+    // Make sure the correct scan correction transform is the first transform in the list and return it
+    private static TransformSpec extractScanCorrection(final TileSpec tileSpec) {
+        final TransformSpec firstTransformSpec = tileSpec.getTransforms().getSpec(0);
         if (! (firstTransformSpec instanceof LeafTransformSpec)) {
             throw new IllegalArgumentException("first transform spec is not a leaf transform spec");
         }
