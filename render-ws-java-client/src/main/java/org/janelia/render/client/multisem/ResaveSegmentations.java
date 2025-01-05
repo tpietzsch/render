@@ -211,8 +211,7 @@ public class ResaveSegmentations {
 		layerOrigins.forEach((exportZ, layerOrigin) -> {
 			final int zRender = getStackZValue(layerOrigin);
 			if (zRender >= 0) {
-				// The export starts with a blank layer, hence the +1
-				zRenderToExport.put(zRender, exportZ + 1);
+				zRenderToExport.put(zRender, exportZ);
 			}
 		});
 
