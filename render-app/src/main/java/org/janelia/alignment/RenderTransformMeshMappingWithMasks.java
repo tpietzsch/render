@@ -155,11 +155,19 @@ public class RenderTransformMeshMappingWithMasks {
         final double dy = affineTransform2D.d(0).getDoublePosition(1);
         final double[] source = new double[2];
         for (int targetY = minY; targetY <= maxY; ++targetY) {
-            final Range xRange = triangle.intersect(targetY, minX, maxX + 1);
+            final Range xRange = triangle.intersect(targetY, minX, maxX);
+            /* TODO: Actually, "maxX" should be "maxX + 1" here, but we compensate for the additional "+1" below.
+                     "maxX + 1" would be correct because intersect range upper bound is exclusive.
+             */
             source[0] = xRange.from();
             source[1] = targetY;
             affineTransform2D.apply(source, source);
-            lineMapper.map(source[0], source[1], dx, dy, xRange.from(), targetY, xRange.length());
+            lineMapper.map(source[0], source[1], dx, dy, xRange.from(), targetY,
+                    xRange.length() + 1
+                    /* TODO: This "+1" is to fix the tests and be compatible to the old code.
+                             However, it leads to pixels on the edge of neighboring triangles to be drawn twice.
+                    */
+            );
         }
 
         return null;
