@@ -47,7 +47,7 @@ public class ShadingModelProvider implements Serializable {
 				// between two models -> interpolate
 				final ModelSpec modelSpecA = sortedModelSpecs.get(i - 1);
 				final ModelSpec modelSpecB = sortedModelSpecs.get(i);
-				final double t = (z - modelSpecA.getZ()) / (double) (modelSpecB.getZ() - modelSpecA.getZ());
+				final double t = (modelSpecB.getZ() - z) / (double) (modelSpecB.getZ() - modelSpecA.getZ());
 				return new InterpolatedShading(modelSpecA.getModel(), modelSpecB.getModel(), t);
 			}
 		}
