@@ -1,11 +1,12 @@
 package org.janelia.alignment.inpainting;
 
+import net.imglib2.Cursor;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccess;
+import net.imglib2.RandomAccessible;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.Img;
 import net.imglib2.img.array.ArrayImgs;
-import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.loops.LoopBuilder;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.type.numeric.real.FloatType;
@@ -15,7 +16,9 @@ import net.imglib2.view.Views;
 import org.janelia.alignment.util.Grid;
 import org.janelia.saalfeldlab.n5.DatasetAttributes;
 import org.janelia.saalfeldlab.n5.N5FSReader;
+import org.janelia.saalfeldlab.n5.N5FSWriter;
 import org.janelia.saalfeldlab.n5.N5Reader;
+import org.janelia.saalfeldlab.n5.N5Writer;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,7 +49,7 @@ public class InterpolatingZInpainter {
 
 	/**
 	 * @param n5Path path to the N5 container containing the data and the mask
-	 * @param dataset name of the dataset to inpaint; assumed to be a multi-scale pyramid, only s0 is inpainted
+	 * @param dataset name of the dataset to inpaint; assumed to be a multiscale pyramid, only s0 is inpainted
 	 * @param maskDataset name of the mask dataset; this is supposed to only cover a small z-range of the dataset and
 	 *                    translated to the correct location in the stack coordinates (with an attribute "translate"
 	 *                    containing the translation vector)
@@ -67,15 +70,20 @@ public class InterpolatingZInpainter {
 		LOG.info("Inpainting {} in {} using mask {} and writing to {}", dataset, n5Path, maskDataset, outputDataset);
 
 		// Read and cache some metadata of the tissue and mask datasets
-		// Assume that the tissue is a multi-scale pyramid / mask is a standalone dataset
+		// Assume that the tissue is a multiscale pyramid / mask is a standalone dataset
 		n5 = new N5FSReader(n5Path);
 		tissueAttributes = n5.getDatasetAttributes(dataset + "/s0");
 		maskAttributes = n5.getDatasetAttributes(maskDataset);
 		tissueMin = n5.getAttribute(dataset, "translate", long[].class);
 		maskMin = n5.getAttribute(maskDataset, "translate", long[].class);
 
+		if (n5.exists(outputDataset)) {
+			throw new RuntimeException("Dataset '" + outputDataset + "' already exists");
+		}
+
 		final List<Grid.Block> blocksToInpaint = getBlocksToInpaint();
 		final Interpolator interpolator = getInterpolator();
+		inpaintBlocks(blocksToInpaint, interpolator);
 
 		n5.close();
 	}
@@ -90,7 +98,7 @@ public class InterpolatingZInpainter {
 		LOG.info("Filtering empty mask blocks from {} blocks", maskBlocks.size());
 		final Img<FloatType> mask = N5Utils.open(n5, maskDataset);
 		final List<Interval> nonEmptyMaskBlocks = new ArrayList<>();
-		for (final Interval block : maskBlocks) {
+		for (final Grid.Block block : maskBlocks) {
 			final IntervalView<FloatType> pixels = Views.interval(mask, block);
 			for (final FloatType pixel : Views.iterable(pixels)) {
 				if (pixel.get() > 0) {
@@ -134,10 +142,53 @@ public class InterpolatingZInpainter {
 		return new Interpolator(firstSlice, lastSlice, firstSliceZ, lastSliceZ);
 	}
 
+	private void inpaintBlocks(final List<Grid.Block> blocksToInpaint, final Interpolator interpolator) {
+		final Img<UnsignedByteType> rawTissue = N5Utils.open(n5, dataset + "/s0");
+		final Img<FloatType> rawMask = N5Utils.open(n5, maskDataset);
+
+		final RandomAccessibleInterval<UnsignedByteType> tissue = Views.translate(rawTissue, tissueMin);
+		final RandomAccessible<FloatType> mask = Views.translate(Views.extendValue(rawMask, 0.0f), maskMin);
+
+		final N5Writer n5Writer = new N5FSWriter(n5Path);
+		n5Writer.createDataset(outputDataset, tissueAttributes);
+
+		for (final Grid.Block block : blocksToInpaint) {
+			final Interval blockInterval = Intervals.translate(block, tissueMin);
+			LOG.info("Inpainting block at {}", blockInterval.minAsLongArray());
+
+			final Img<UnsignedByteType> inpaintedBlock = ArrayImgs.unsignedBytes(blockInterval.dimensionsAsLongArray());
+
+			final Cursor<UnsignedByteType> cursor = Views.translate(inpaintedBlock, blockInterval.minAsLongArray()).localizingCursor();
+			final RandomAccess<UnsignedByteType> tissueAccess = Views.interval(tissue, blockInterval).randomAccess();
+			final RandomAccess<FloatType> maskAccess = Views.interval(mask, blockInterval).randomAccess();
+			final long[] location = new long[3];
+
+			while (cursor.hasNext()) {
+				final UnsignedByteType targetPixel = cursor.next();
+				cursor.localize(location);
+
+				final int tissuePixel = tissueAccess.setPositionAndGet(location).get();
+				final float maskPixel = maskAccess.setPositionAndGet(location).get();
+
+				if (maskPixel == 0.0f) {
+					targetPixel.set(tissuePixel);
+				} else {
+					final int interpolatedPixel = interpolator.getAt(location);
+					final short blendedValue = UnsignedByteType.getCodedSignedByteChecked((int) (tissuePixel * (1 - maskPixel) + interpolatedPixel * maskPixel));
+					targetPixel.set(blendedValue);
+				}
+			}
+
+			N5Utils.saveBlock(inpaintedBlock, n5Writer, outputDataset, tissueAttributes, block.gridPosition);
+		}
+
+		n5Writer.close();
+	}
+
 
 	public static void main(final String[] args) {
 		final String n5Path = "/nrs/fibsem/data/jrc_P3-E2-D1-Lip4-19/jrc_P3-E2-D1-Lip4-19.n5";
-		final String dataset = "render/jrc_P3_E2_D1_Lip4_19/v1_acquire_trimmed_align___20240421_080041";
+		final String dataset = "render/jrc_P3_E2_D1_Lip4_19/v1_acquire_trimmed_align_v2_destreak___20250114_154257";
 		final String maskDataset = "render/jrc_P3_E2_D1_Lip4_19/smooth-mask_20250114";
 		final String outputDataset = "render/jrc_P3_E2_D1_Lip4_19/inpainted_blocks";
 
@@ -162,7 +213,7 @@ public class InterpolatingZInpainter {
 				final long lastLayerZ
 		) {
 			// Copy slices into proper 2D images to not keep all the blocks in memory
-			LOG.info("Interpolating slices with z={} and z={}", firstSlice, lastSlice);
+			LOG.info("Interpolating between slices with z={} and z={}", firstLayerZ, lastLayerZ);
 			firstSliceAccess = cloneSlice(firstSlice).randomAccess();
 			lastSliceAccess = cloneSlice(lastSlice).randomAccess();
 
