@@ -229,6 +229,15 @@
       }
     ],
 
+    "jrc_mus_cerebellum_2-destreak-16bit" : [
+      {
+        "className" : "org.janelia.alignment.destreak.LocalSmoothMaskStreakCorrector16Bit",
+        "parameters" : {
+          "dataString" : "5545,9240,40,6,0.0,10,7.0,0.05"
+        }
+      }
+    ],
+
     "simpleTest" : [
       {
         "className" : "org.janelia.alignment.filter.CLAHE",
