@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
 
 /**
  * Inpaint missing values in a small area of an image by interpolating along the z-axis. A user supplied mask with
- * values in the inveral [0, 1] is used to determine the area to inpaint. The content to inpaint is computed by linearly
+ * values in the interval [0, 1] is used to determine the area to inpaint. The content to inpaint is computed by linearly
  * interpolating the z-layers right before and after the missing area.
  */
 public class InterpolatingZInpainter {
@@ -174,7 +174,7 @@ public class InterpolatingZInpainter {
 					targetPixel.set(tissuePixel);
 				} else {
 					final int interpolatedPixel = interpolator.getAt(location);
-					final short blendedValue = UnsignedByteType.getCodedSignedByteChecked((int) (tissuePixel * (1 - maskPixel) + interpolatedPixel * maskPixel));
+					final byte blendedValue = UnsignedByteType.getCodedSignedByteChecked((int) (tissuePixel * (1 - maskPixel) + interpolatedPixel * maskPixel));
 					targetPixel.set(blendedValue);
 				}
 			}
@@ -225,17 +225,17 @@ public class InterpolatingZInpainter {
 			final RandomAccessibleInterval<UnsignedByteType> lazySlice = Views.dropSingletonDimensions(slice);
 			final Img<UnsignedByteType> sliceImg = ArrayImgs.unsignedBytes(lazySlice.dimensionsAsLongArray());
 			LoopBuilder.setImages(lazySlice, sliceImg).forEachPixel((i, o) -> o.set(i));
-			return sliceImg;
+			return Views.translate(sliceImg, slice.minAsLongArray());
 		}
 
-		public byte getAt(final long[] position) {
+		public int getAt(final long[] position) {
 			final long x = position[0];
 			final long y = position[1];
 			final long z = position[2];
 			final double t = (double) (z - firstLayerZ) / nLayers;
 			final int firstValue = firstSliceAccess.setPositionAndGet(x, y).get();
 			final int lastValue = lastSliceAccess.setPositionAndGet(x, y).get();
-			return UnsignedByteType.getCodedSignedByteChecked((int) (firstValue * (1 - t) + lastValue * t));
+			return (int) (firstValue * (1 - t) + lastValue * t);
 		}
 	}
 }
