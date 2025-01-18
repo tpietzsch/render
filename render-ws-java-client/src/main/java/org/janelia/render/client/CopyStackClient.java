@@ -239,7 +239,7 @@ public class CopyStackClient {
     private final LeafTransformSpec moveStackTransform;
     private final List<Double> zValues;
 
-    private CopyStackClient(final Parameters parameters) throws Exception {
+    public CopyStackClient(final Parameters parameters) throws Exception {
 
         this.parameters = parameters;
         this.excludedCellList = parameters.excludedCells.toList();
@@ -305,7 +305,7 @@ public class CopyStackClient {
 
     }
 
-    private void setUpDerivedStack() throws Exception {
+    public void setUpDerivedStack() throws Exception {
         final StackMetaData fromStackMetaData = fromDataClient.getStackMetaData(parameters.fromStack);
 
         if (parameters.splitMergedSections) {
@@ -321,11 +321,11 @@ public class CopyStackClient {
         toDataClient.setupDerivedStack(fromStackMetaData, parameters.toStack);
     }
 
-    private void completeToStack() throws Exception {
+    public void completeToStack() throws Exception {
         toDataClient.setStackState(parameters.toStack, StackState.COMPLETE);
     }
 
-    private void copyLayers()
+    public void copyLayers()
             throws Exception {
         for (final Double z : zValues) {
             copyLayer(z);

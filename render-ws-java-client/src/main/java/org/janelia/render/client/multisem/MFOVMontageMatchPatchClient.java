@@ -17,6 +17,7 @@ import org.janelia.alignment.match.CanvasId;
 import org.janelia.alignment.match.CanvasMatches;
 import org.janelia.alignment.match.MatchCollectionId;
 import org.janelia.alignment.match.OrderedCanvasIdPair;
+import org.janelia.alignment.multisem.MultiSemUtilities;
 import org.janelia.alignment.multisem.StackMFOVWithZValues;
 import org.janelia.alignment.spec.ResolvedTileSpecCollection;
 import org.janelia.alignment.spec.TileBounds;
@@ -238,6 +239,7 @@ public class MFOVMontageMatchPatchClient {
                                                                                     null,
                                                                                     false,
                                                                                     false,
+                                                                                    false,
                                                                                     false);
 
         // add all MFOV tile pairs to unconnected set
@@ -285,9 +287,9 @@ public class MFOVMontageMatchPatchClient {
                        }
                    } else {
                        // TODO: as coded here, same layer pair will often come from last MFOV (19) - does it matter?
-                       final String sfovIndexPairName = Utilities.getSFOVIndexPairName(canvasMatches.getpGroupId(),
-                                                                                       pId,
-                                                                                       qId);
+                       final String sfovIndexPairName = MultiSemUtilities.getSFOVIndexPairName(canvasMatches.getpGroupId(),
+                                                                                               pId,
+                                                                                               qId);
                        sameLayerPairsFromOtherMFOVs.put(sfovIndexPairName, pair);
                    }
                }
@@ -302,9 +304,9 @@ public class MFOVMontageMatchPatchClient {
 
             // add same layer pair from another MFOV if any exists
             final CanvasId p = unconnectedPair.getP();
-            final String indexPairName = Utilities.getSFOVIndexPairName(p.getGroupId(),
-                                                                        p.getId(),
-                                                                        unconnectedPair.getQ().getId());
+            final String indexPairName = MultiSemUtilities.getSFOVIndexPairName(p.getGroupId(),
+                                                                                p.getId(),
+                                                                                unconnectedPair.getQ().getId());
             final OrderedCanvasIdPair sameLayerPair = sameLayerPairsFromOtherMFOVs.get(indexPairName);
             if (sameLayerPair == null) {
                 LOG.info("updatePositionPairDataForZ: no same layer pair found for unconnected pair {}",

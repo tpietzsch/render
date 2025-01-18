@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.janelia.alignment.json.JsonUtils;
 import org.janelia.alignment.match.MatchCollectionId;
@@ -17,7 +18,7 @@ import org.janelia.alignment.spec.stack.StackId;
 import org.janelia.alignment.spec.stack.StackIdNamingGroup;
 import org.janelia.alignment.spec.stack.StackWithZValues;
 import org.janelia.render.client.RenderDataClient;
-import org.janelia.render.client.multisem.Utilities;
+import org.janelia.alignment.multisem.MultiSemUtilities;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -113,9 +114,9 @@ public class MultiProjectParameters
             final StackId stackId = stackWithZValues.getStackId();
             final RenderDataClient dataClient = defaultRenderClient.buildClient(stackId.getOwner(),
                                                                                 stackId.getProject());
-            final List<String> mFOVIdList = Utilities.getMFOVNames(dataClient,
-                                                                   stackId.getStack(),
-                                                                   stackWithZValues.getFirstZ());
+            final List<String> mFOVIdList = getMFOVNames(dataClient,
+                                                         stackId.getStack(),
+                                                         stackWithZValues.getFirstZ());
 
             LOG.info("buildListOfStackMFOVWithAllZ: found {} MFOVs in {}", mFOVIdList.size(), stackWithZValues);
 
@@ -152,5 +153,20 @@ public class MultiProjectParameters
 
     private static final JsonUtils.Helper<MultiProjectParameters> JSON_HELPER =
             new JsonUtils.Helper<>(MultiProjectParameters.class);
+
+    /**
+     * @return list of distinct sorted MFOV names for the specified stack z-layer.
+     */
+    public static List<String> getMFOVNames(final RenderDataClient renderDataClient,
+                                            final String stack,
+                                            final Double z)
+            throws IOException {
+        return renderDataClient.getTileBounds(stack, z)
+                .stream()
+                .map(tileBounds -> MultiSemUtilities.getMFOVForTileId(tileBounds.getTileId()))
+                .distinct()
+                .sorted()
+                .collect(Collectors.toList());
+    }
 
 }

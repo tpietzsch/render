@@ -23,6 +23,7 @@ import org.janelia.alignment.match.MatchCollectionId;
 import org.janelia.alignment.match.OrderedCanvasIdPair;
 import org.janelia.alignment.match.RenderableCanvasIdPairs;
 import org.janelia.alignment.match.parameters.FeatureStorageParameters;
+import org.janelia.alignment.multisem.MultiSemUtilities;
 import org.janelia.alignment.multisem.OrderedMFOVPair;
 import org.janelia.alignment.multisem.UnconnectedMFOVPairsForStack;
 import org.janelia.alignment.spec.ResolvedTileSpecCollection;
@@ -138,7 +139,7 @@ public class MFOVCrossMatchPatchClient {
         public void validateAndSetupDerivedValues()
                 throws IllegalArgumentException {
             if (matchStorageFile != null) {
-                Utilities.validateMatchStorageLocation(matchStorageFile);
+                MultiSemUtilities.validateMatchStorageLocation(matchStorageFile);
             }
             sFOVIndexList = sFOVIndexList.stream().distinct().sorted().collect(Collectors.toList());
             sFOVIndexSet = new HashSet<>(sFOVIndexList);
@@ -264,7 +265,7 @@ public class MFOVCrossMatchPatchClient {
 
             buildUnconnectedData(pZ, qZ, mFOVName);
 
-            if (unconnectedPairsForMFOV.size() > 0) {
+            if (! unconnectedPairsForMFOV.isEmpty()) {
                 final String urlTemplateString =
                         "{baseDataUrl}/owner/" + stackId.getOwner() + "/project/" +
                         stackId.getProject() +
@@ -302,10 +303,10 @@ public class MFOVCrossMatchPatchClient {
         final ResolvedTileSpecCollection pResolvedTiles = zToResolvedTiles.get(pZ);
         final ResolvedTileSpecCollection qResolvedTiles = zToResolvedTiles.get(qZ);
 
-        final Map<String, TileSpec> pSFOVToTileSpec = Utilities.mapMFOVTilesToSFOVIds(pResolvedTiles.getTileSpecs(),
-                                                                                      mFOVName);
-        final Map<String, TileSpec> qSFOVToTileSpec = Utilities.mapMFOVTilesToSFOVIds(qResolvedTiles.getTileSpecs(),
-                                                                                      mFOVName);
+        final Map<String, TileSpec> pSFOVToTileSpec = MultiSemUtilities.mapMFOVTilesToSFOVIds(pResolvedTiles.getTileSpecs(),
+                                                                                              mFOVName);
+        final Map<String, TileSpec> qSFOVToTileSpec = MultiSemUtilities.mapMFOVTilesToSFOVIds(qResolvedTiles.getTileSpecs(),
+                                                                                              mFOVName);
 
         final String pGroupId = pZ.toString();
         final String qGroupId = qZ.toString();
@@ -325,7 +326,7 @@ public class MFOVCrossMatchPatchClient {
         }
 
         // query web service to find connected tile pairs and remove them from pairs set
-        if (canvasPairsForMFOV.size() > 0) {
+        if (! canvasPairsForMFOV.isEmpty()) {
             for (final CanvasMatches canvasMatches : matchClient.getMatchesBetweenGroups(pGroupId,
                                                                                          qGroupId,
                                                                                          true)) {
@@ -368,7 +369,7 @@ public class MFOVCrossMatchPatchClient {
                                                                      mFOVMatches,
                                                                      context);
 
-            if (sFOVMatchesList.size() > 0) {
+            if (! sFOVMatchesList.isEmpty()) {
                 LOG.info("storeMatchesForLayer: saving matches for {}", context);
 
                 if (parameters.matchStorageFile != null) {
@@ -398,7 +399,7 @@ public class MFOVCrossMatchPatchClient {
 
         OrderedCanvasIdPair firstUnconnectedPairWithWrongSFOVIndex = null;
         for (final OrderedCanvasIdPair canvasPair : unconnectedPairsForMFOV) {
-            final String sFOV = Utilities.getSFOVForTileId(canvasPair.getP().getId());
+            final String sFOV = MultiSemUtilities.getSFOVForTileId(canvasPair.getP().getId());
             final String sFOVIndex = sFOV.substring(sFOV.length() - 3);
             if (parameters.sFOVIndexSet.contains(sFOVIndex)) {
                 unconnectedPairsWithSFOVIndex.add(canvasPair);
@@ -407,7 +408,7 @@ public class MFOVCrossMatchPatchClient {
             }
         }
 
-        if (unconnectedPairsWithSFOVIndex.size() == 0) {
+        if (unconnectedPairsWithSFOVIndex.isEmpty()) {
             if (firstUnconnectedPairWithWrongSFOVIndex == null) {
                 LOG.warn("buildMatches: no unconnected pairs exist for {}", context);
             } else {
@@ -446,8 +447,8 @@ public class MFOVCrossMatchPatchClient {
         final TileSpec pTileSpec = pResolvedTiles.getTileSpec(p.getId());
         final TileSpec qTileSpec = qResolvedTiles.getTileSpec(q.getId());
 
-        final List<Point> pPoints = Utilities.transformMFOVMatchesForTile(mFOVMatches, pTileSpec, true);
-        final List<Point> qPoints = Utilities.transformMFOVMatchesForTile(mFOVMatches, qTileSpec, false);
+        final List<Point> pPoints = MultiSemUtilities.transformMFOVMatchesForTile(mFOVMatches, pTileSpec, true);
+        final List<Point> qPoints = MultiSemUtilities.transformMFOVMatchesForTile(mFOVMatches, qTileSpec, false);
 
         final List<PointMatch> matchList = new ArrayList<>(pPoints.size());
         for (int i = 0; i < pPoints.size(); i++) {
@@ -458,7 +459,7 @@ public class MFOVCrossMatchPatchClient {
             }
         }
 
-        if (matchList.size() == 0) {
+        if (matchList.isEmpty()) {
             throw new IOException("unable to invert matches for sFOV pair " + sFOVPair);
         }
 

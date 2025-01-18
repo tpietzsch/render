@@ -14,7 +14,7 @@ import org.janelia.alignment.json.JsonUtils;
 import org.janelia.alignment.match.MatchCollectionId;
 import org.janelia.alignment.multisem.StackMFOVWithZValues;
 import org.janelia.alignment.util.FileUtil;
-import org.janelia.render.client.multisem.Utilities;
+import org.janelia.alignment.multisem.MultiSemUtilities;
 
 /**
  * Parameters for MFOV montage match patching.
@@ -128,9 +128,9 @@ public class MFOVMontageMatchPatchParameters
         String mFOVId = multiFieldOfViewId;
         if (mFOVId == null) {
             if (pTileId != null) {
-                mFOVId = Utilities.getMFOVForTileId(pTileId);
+                mFOVId = MultiSemUtilities.getMFOVForTileId(pTileId);
             } else if (qTileId != null) {
-                mFOVId = Utilities.getMFOVForTileId(qTileId);
+                mFOVId = MultiSemUtilities.getMFOVForTileId(qTileId);
             }
         }
         return mFOVId;
@@ -184,10 +184,10 @@ public class MFOVMontageMatchPatchParameters
             throws IllegalArgumentException {
 
         if (pTileId != null) {
-            multiFieldOfViewId = Utilities.getMFOVForTileId(pTileId);
+            multiFieldOfViewId = MultiSemUtilities.getMFOVForTileId(pTileId);
             pTileIdPrefixForRun = getTileIdPrefixForRun(pTileId);
             if (qTileId != null) {
-                if (! multiFieldOfViewId.equals(Utilities.getMFOVForTileId(qTileId))) {
+                if (! multiFieldOfViewId.equals(MultiSemUtilities.getMFOVForTileId(qTileId))) {
                     throw new IllegalArgumentException("pTileId and qTileId reference different MFOVs");
                 }
                 qTileIdPrefixForRun = getTileIdPrefixForRun(qTileId);
@@ -195,7 +195,7 @@ public class MFOVMontageMatchPatchParameters
                 qTileIdPrefixForRun = multiFieldOfViewId;
             }
         } else if (qTileId != null) {
-            multiFieldOfViewId = Utilities.getMFOVForTileId(qTileId);
+            multiFieldOfViewId = MultiSemUtilities.getMFOVForTileId(qTileId);
             qTileIdPrefixForRun = getTileIdPrefixForRun(qTileId);
             pTileIdPrefixForRun = multiFieldOfViewId;
         } else if ((multiFieldOfViewId == null) || (multiFieldOfViewId.length() != 10)) {
@@ -206,7 +206,7 @@ public class MFOVMontageMatchPatchParameters
         }
 
         if (matchStorageFile != null) {
-            Utilities.validateMatchStorageLocation(matchStorageFile);
+            MultiSemUtilities.validateMatchStorageLocation(matchStorageFile);
         }
     }
 

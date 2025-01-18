@@ -1,4 +1,4 @@
-package org.janelia.render.client.multisem;
+package org.janelia.alignment.multisem;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -9,16 +9,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
-
-import org.janelia.alignment.match.CanvasId;
-import org.janelia.alignment.match.CanvasMatchResult;
-import org.janelia.alignment.match.CanvasMatches;
-import org.janelia.alignment.match.OrderedCanvasIdPair;
-import org.janelia.alignment.spec.TileSpec;
-import org.janelia.render.client.RenderDataClient;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import mpicbg.models.AbstractAffineModel2D;
 import mpicbg.models.CoordinateTransform;
@@ -28,12 +18,20 @@ import mpicbg.models.NoninvertibleModelException;
 import mpicbg.models.Point;
 import mpicbg.models.PointMatch;
 
+import org.janelia.alignment.match.CanvasId;
+import org.janelia.alignment.match.CanvasMatchResult;
+import org.janelia.alignment.match.CanvasMatches;
+import org.janelia.alignment.match.OrderedCanvasIdPair;
+import org.janelia.alignment.spec.TileSpec;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Utility methods for working with Multi-SEM data sets.
  *
  * @author Eric Trautman
  */
-public class Utilities {
+public class MultiSemUtilities {
 
     /**
      * @return 0399_m0013 for w60_magc0399_scan005_m0013_s001
@@ -229,20 +227,5 @@ public class Utilities {
         return tileSpec.getMatchingTransformedPoints(rawLocations);
     }
 
-    /**
-     * @return list of distinct sorted MFOV names for the specified stack z-layer.
-     */
-    public static List<String> getMFOVNames(final RenderDataClient renderDataClient,
-                                            final String stack,
-                                            final Double z)
-            throws IOException {
-        return renderDataClient.getTileBounds(stack, z)
-                .stream()
-                .map(tileBounds -> getMFOVForTileId(tileBounds.getTileId()))
-                .distinct()
-                .sorted()
-                .collect(Collectors.toList());
-    }
-
-    private static final Logger LOG = LoggerFactory.getLogger(Utilities.class);
+    private static final Logger LOG = LoggerFactory.getLogger(MultiSemUtilities.class);
 }

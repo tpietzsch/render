@@ -170,7 +170,6 @@ public class ExampleMatchVisualizationClient {
      * ('::' for existing connections and '??' for missing connections) to standard out.
      * This is sufficient for the single row FIB-SEM stacks with the same number of tiles in each layer.
      * It won't work for many other cases.
-     *
      * Since the primary goal of the client is to demonstrate how to pull tile and match data from render,
      * it has been left in its current less-than-ideal state.
      *
@@ -185,7 +184,7 @@ public class ExampleMatchVisualizationClient {
 
         final List<Double> zValues = zToSectionIdMap.keySet().stream().sorted().collect(Collectors.toList());
 
-        if (zValues.size() == 0) {
+        if (zValues.isEmpty()) {
             throw new IllegalArgumentException(
                     "stack " + parameters.stack + " does not contain any layers with the specified z values");
         }
@@ -209,7 +208,8 @@ public class ExampleMatchVisualizationClient {
                                                                null,
                                                                true,
                                                                false,
-                                                               false)
+                                                               false,
+                                                              false)
                             .stream()
                             .map(pair -> {
                                 // Minor Hack: Remove same layer relative position data inserted by
@@ -245,7 +245,8 @@ public class ExampleMatchVisualizationClient {
                                                                    null,
                                                                    true,
                                                                    true,
-                                                                   false)
+                                                                   false,
+                                                                  false)
                                 .stream().sorted().collect(Collectors.toList());
 
                 for (final OrderedCanvasIdPair pair : crossLayerNeighborPairs) {

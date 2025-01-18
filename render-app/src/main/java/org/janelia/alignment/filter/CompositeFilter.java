@@ -19,7 +19,6 @@ public class CompositeFilter implements Filter {
     // empty constructor required to create instances from specifications
     @SuppressWarnings("unused")
     public CompositeFilter() {
-        this((List<Filter>) null);
     }
 
     public CompositeFilter(final Filter... filters) {
@@ -27,7 +26,7 @@ public class CompositeFilter implements Filter {
     }
 
     public CompositeFilter(final List<Filter> filters) {
-        this.filters = filters;
+        this.filters = new ArrayList<>(filters);
     }
 
     @Override
@@ -50,7 +49,7 @@ public class CompositeFilter implements Filter {
         return map;
     }
 
-    private static String filterKey(final int i) {
+    static String filterKey(final int i) {
         return "filter" + i;
     }
 

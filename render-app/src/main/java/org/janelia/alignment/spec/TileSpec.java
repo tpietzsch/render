@@ -661,6 +661,10 @@ public class TileSpec implements Serializable {
         return spec;
     }
 
+    /**
+     * Set a filter spec for this tile spec (replacing any existing filter spec).
+     * @param filterSpec the filter spec to set for this tile spec
+     */
     public void setFilterSpec(final FilterSpec filterSpec) {
         this.filterSpec = filterSpec;
         if (channels != null) {
@@ -668,6 +672,15 @@ public class TileSpec implements Serializable {
                 channelSpec.setFilterSpec(filterSpec);
             }
         }
+    }
+
+    /**
+     * Add a filter spec to this tile spec (combining with any existing filter spec).
+     * @param filterSpec the filter spec to add
+     */
+    public void addFilterSpec(final FilterSpec filterSpec) {
+        final FilterSpec combinedFilterSpec = FilterSpec.combine(this.filterSpec, filterSpec);
+        setFilterSpec(combinedFilterSpec);
     }
 
     public boolean hasTransforms() {

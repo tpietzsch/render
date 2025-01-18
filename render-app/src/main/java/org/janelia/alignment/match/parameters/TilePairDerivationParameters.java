@@ -63,6 +63,12 @@ public class TilePairDerivationParameters implements Serializable {
     public boolean excludeSameSectionNeighbors = false;
 
     @Parameter(
+            names = "--excludeSameMfovNeighbors",
+            description = "Exclude neighbor tiles in the same layer (z) and MFOV as the source tile",
+            arity = 1)
+    public boolean excludeSameMfovNeighbors = false;
+
+    @Parameter(
             names = "--excludePairsInMatchCollection",
             description = "Name of match collection whose existing pairs should be excluded from the generated list (default is to include all pairs)"
     )

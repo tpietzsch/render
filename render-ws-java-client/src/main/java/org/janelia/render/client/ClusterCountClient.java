@@ -172,7 +172,7 @@ public class ClusterCountClient {
         return stackClusterSummary;
     }
 
-    private SortedConnectedCanvasIdClusters findConnectedClustersForSlab(final RenderDataClient renderDataClient,
+    public SortedConnectedCanvasIdClusters findConnectedClustersForSlab(final RenderDataClient renderDataClient,
                                                                          final String stack,
                                                                          final RenderDataClient matchDataClient,
                                                                          final Map<Double, Set<String>> zToSectionIdsMap,
