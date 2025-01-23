@@ -48,6 +48,15 @@ class Triangle {
         this.cy = cy;
     }
 
+    @Override
+    public String toString() {
+        return "Triangle{" +
+               "A=(" + ax + ", " + ay + "), " +
+               "B=(" + bx + ", " + by + "), " +
+               "C=(" + cx + ", " + cy + ")" +
+               '}';
+    }
+
     static class Range {
         private final int from;
         private final int length;
